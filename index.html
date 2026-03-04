@@ -245,9 +245,13 @@ function render() {
       return state.sortAsc ? da-db : db-da;
     });
 
-  // Calendar days
+  // Calendar days (scroll ~3 months ahead)
   const days = [];
-  for (let i=0;i<14;i++) { const d=new Date(today); d.setDate(today.getDate()+i); days.push(d); }
+  const end = new Date(today);
+  end.setMonth(end.getMonth() + 3);
+  for (let d = new Date(today); d <= end; d.setDate(d.getDate() + 1)) {
+    days.push(new Date(d));
+  }
   const byDate = {};
   state.sessions.forEach(s => { if(!byDate[s.date]) byDate[s.date]=[]; byDate[s.date].push(s); });
 
@@ -370,7 +374,7 @@ function render() {
     <!-- Calendar -->
     <div class="card" style="padding:14px 0 10px;margin-bottom:12px">
       <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;margin-bottom:10px;padding-left:14px;display:flex;align-items:center;gap:6px">
-        <span style="font-size:14px">📅</span> Next 2 Weeks
+        <span style="font-size:14px">📅</span> Next 3 Months
       </div>
       <div class="cal-strip">${calHTML}</div>
       <div style="display:flex;gap:10px;padding-left:14px;padding-top:4px;flex-wrap:wrap">
