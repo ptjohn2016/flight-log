@@ -112,6 +112,19 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
   }
 }
 
+/* Add to calendar button */
+.cal-export-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 0 16px; min-height: 48px;
+  background: linear-gradient(135deg, #064e3b, #065f46);
+  border: 1px solid #22c55e33; border-radius: 10px;
+  color: #86efac; font-size: 14px; font-weight: 600;
+  font-family: var(--font); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s;
+}
+.cal-export-btn:active { opacity: 0.7; }
+
 </style>
 </head>
 <body>
@@ -221,6 +234,180 @@ function badge(status, small) {
 }
 function getInstructor(s) { return s.instructor==="__custom__" ? s.customInstructor : s.instructor; }
 function hoursUsed() { return state.sessions.filter(s=>s.status!=="cancelled"&&s.status!=="closed"&&s.hobbsLogged).reduce((sum,s)=>sum+(parseFloat(s.hobbsLogged)||0),0); }
+
+/* ═══════════════════════════════════════════
+   ADD TO CALENDAR (.ics generation)
+   ═══════════════════════════════════════════ */
+function padTwo(n) { return n.toString().padStart(2, "0"); }
+
+function toICSDate(dateStr, timeStr) {
+  // Returns YYYYMMDDTHHMMSS format (local time, no Z suffix)
+  const [y, m, d] = dateStr.split("-");
+  const [hh, mm] = (timeStr || "00:00").split(":");
+  return `${y}${padTwo(m)}${padTwo(d)}T${padTwo(hh)}${padTwo(mm)}00`;
+}
+
+function icsEscape(str) {
+  if (!str) return "";
+  return str.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+}
+
+function foldLine(line) {
+  // ICS spec: lines should be max 75 octets; fold with CRLF + space
+  const parts = [];
+  while (line.length > 75) {
+    parts.push(line.substring(0, 75));
+    line = " " + line.substring(75);
+  }
+  parts.push(line);
+  return parts.join("\r\n");
+}
+
+function generateICS(session) {
+  const isExam = session.lessonType && session.lessonType.startsWith("Exam");
+  const inst = getInstructor(session);
+  const durationHrs = parseFloat(session.durationHrs) || 1.5;
+  const durationMins = Math.round(durationHrs * 60);
+
+  // Calculate end time
+  const startDate = new Date(session.date + "T" + (session.time || "09:00") + ":00");
+  const endDate = new Date(startDate.getTime() + durationMins * 60 * 1000);
+
+  const dtStart = toICSDate(session.date, session.time || "09:00");
+  const endDateStr = endDate.getFullYear() + "-" + padTwo(endDate.getMonth()+1) + "-" + padTwo(endDate.getDate());
+  const endTimeStr = padTwo(endDate.getHours()) + ":" + padTwo(endDate.getMinutes());
+  const dtEnd = toICSDate(endDateStr, endTimeStr);
+
+  // Build summary
+  const statusLabel = getStatus(session.status).l;
+  let summary = isExam ? `📝 ${session.lessonType}` : `✈ ${session.lessonType}`;
+
+  // Build description with all details
+  const descParts = [];
+  descParts.push(`NPPL (Microlight) Training`);
+  descParts.push(`Session: ${session.lessonType}`);
+  descParts.push(`Status: ${statusLabel}`);
+  if (inst) descParts.push(`Instructor: ${inst}`);
+  if (session.aircraft) descParts.push(`Aircraft: ${session.aircraft}`);
+  if (!isExam) descParts.push(`Planned Duration: ${durationHrs}h`);
+  if (session.hobbsLogged) descParts.push(`Hobbs Logged: ${session.hobbsLogged}h`);
+  if (session.notes) {
+    descParts.push("");
+    descParts.push(`Notes:`);
+    descParts.push(session.notes);
+  }
+  const description = descParts.join("\\n");
+
+  const now = new Date();
+  const stamp = now.getFullYear().toString() +
+    padTwo(now.getMonth()+1) + padTwo(now.getDate()) + "T" +
+    padTwo(now.getHours()) + padTwo(now.getMinutes()) + padTwo(now.getSeconds());
+
+  const uid = (session.id || genId()) + "@flightlog.app";
+
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Flight Log//NPPL Training//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    foldLine("UID:" + uid),
+    foldLine("DTSTAMP:" + stamp),
+    foldLine("DTSTART:" + dtStart),
+    foldLine("DTEND:" + dtEnd),
+    foldLine("SUMMARY:" + icsEscape(summary)),
+    foldLine("DESCRIPTION:" + icsEscape(description)),
+  ];
+
+  // Add status mapping
+  if (session.status === "confirmed") {
+    lines.push("STATUS:CONFIRMED");
+  } else if (session.status === "tentative") {
+    lines.push("STATUS:TENTATIVE");
+  } else if (session.status === "cancelled") {
+    lines.push("STATUS:CANCELLED");
+  }
+
+  // Add alarm reminder 1 hour before
+  if (session.status !== "cancelled" && session.status !== "completed") {
+    lines.push("BEGIN:VALARM");
+    lines.push("TRIGGER:-PT1H");
+    lines.push("ACTION:DISPLAY");
+    lines.push(foldLine("DESCRIPTION:Flight training in 1 hour: " + icsEscape(session.lessonType)));
+    lines.push("END:VALARM");
+  }
+
+  lines.push("END:VEVENT");
+  lines.push("END:VCALENDAR");
+
+  return lines.join("\r\n");
+}
+
+function addToCalendar(sessionOrId) {
+  // Read form values first if we're in the form
+  let session;
+  if (typeof sessionOrId === "string") {
+    session = state.sessions.find(s => s.id === sessionOrId);
+  } else {
+    session = sessionOrId;
+  }
+
+  if (!session || !session.date) {
+    alert("Please set a date before adding to calendar.");
+    return;
+  }
+  if (session.status === "closed") return;
+
+  const icsContent = generateICS(session);
+  const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+
+  // Use different approaches depending on platform
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (isIOS) {
+    // On iOS, we need a data URI approach for better calendar picker support
+    const reader = new FileReader();
+    reader.onload = function() {
+      const a = document.createElement("a");
+      a.href = reader.result;
+      a.download = "flight-session.ics";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => document.body.removeChild(a), 100);
+    };
+    reader.readAsDataURL(blob);
+  } else {
+    // Standard download approach
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "flight-session.ics";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }
+}
+
+function addToCalendarFromForm() {
+  // Read the current form values into formState.data first
+  readForm();
+  const f = formState.data;
+  if (!f.date) {
+    alert("Please set a date first.");
+    return;
+  }
+  if (!f.time && formState.mode !== "closure") {
+    alert("Please set a time first.");
+    return;
+  }
+  addToCalendar(f);
+}
+
 
 /* ═══════════════════════════════════════════
    RENDER
@@ -334,6 +521,7 @@ function render() {
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
             <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:14px;padding:0" onclick="event.stopPropagation();toggleStatus('${s.id}')">⟳</button>
+            <button class="btn44" style="width:40px;height:40px;background:#064e3b;border:1px solid #22c55e33;border-radius:10px;color:#86efac;font-size:14px;padding:0" title="Add to Calendar" onclick="event.stopPropagation();addToCalendar('${s.id}')">📅</button>
             <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#ef4444;font-size:13px;padding:0" onclick="event.stopPropagation();deleteSession('${s.id}')">✕</button>
           </div>
         </div>
@@ -537,11 +725,17 @@ function renderForm() {
         </div>
       `:''}
       <div style="margin-bottom:16px"><label class="label">Notes</label><textarea id="f-notes" rows="4" placeholder="${isExam?'Revision topics...':'Lesson notes, debrief...'}">${esc(f.notes||'')}</textarea></div>
+
+      <!-- Add to Calendar button -->
+      <button class="cal-export-btn" onclick="addToCalendarFromForm()" type="button">
+        <span style="font-size:18px">📅</span> Add to Calendar
+      </button>
+      <div style="text-align:center;margin-top:6px;font-size:10px;color:#475569">Downloads .ics file — choose which calendar to add it to</div>
     `;
   }
 
   if (formState.editing) {
-    body += `<button class="btn44" style="width:100%;padding:0 16px;min-height:48px;background:#450a0a;border:1px solid #ef444433;border-radius:10px;color:#fca5a5;font-size:14px;font-weight:600;margin-top:8px" onclick="deleteAndClose()">Delete ${isClosure?'Closure':'Session'}</button>`;
+    body += `<button class="btn44" style="width:100%;padding:0 16px;min-height:48px;background:#450a0a;border:1px solid #ef444433;border-radius:10px;color:#fca5a5;font-size:14px;font-weight:600;margin-top:12px" onclick="deleteAndClose()">Delete ${isClosure?'Closure':'Session'}</button>`;
   }
 
   overlay.innerHTML = `
@@ -647,6 +841,8 @@ window.deleteSession = deleteSession;
 window.toggleStatus = toggleStatus;
 window.resetBlock = resetBlock;
 window.handleDayClick = handleDayClick;
+window.addToCalendar = addToCalendar;
+window.addToCalendarFromForm = addToCalendarFromForm;
 
 /* ═══════════════════════════════════════════
    INIT
