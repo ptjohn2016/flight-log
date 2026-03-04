@@ -309,15 +309,13 @@ function generateICS(session) {
   if (session.notes) {
     descLines.push("");
     descLines.push("Notes:");
-    session.notes.split("
-").forEach(l => {
+    session.notes.split("\n").forEach(l => {
       const line = (l || "").trim();
       if (line) descLines.push(`• ${line}`);
     });
   }
 
-  const description = descLines.join("
-");
+  const description = descLines.join("\n");
 
   const now = new Date();
   const stamp = now.getFullYear().toString() +
