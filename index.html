@@ -282,30 +282,42 @@ function generateICS(session) {
   const statusLabel = getStatus(session.status).l;
   let summary = isExam ? `📝 ${session.lessonType}` : `✈ ${session.lessonType}`;
 
-  // Build description with all details — formatted nicely
-  const line = "───────────────────────────────────";
-  const descParts = [];
-  descParts.push(`┌${line}┐`);
-  descParts.push(`│  ✈️  NPPL (MICROLIGHT) TRAINING`);
-  descParts.push(`├${line}┤`);
-  descParts.push(`│  Session:     ${session.lessonType}`);
-  if (inst) descParts.push(`│  Instructor:  ${inst}`);
-  const statusEmoji = session.status === "confirmed" ? "✅" : session.status === "tentative" ? "🟡" : session.status === "completed" ? "🔵" : session.status === "cancelled" ? "❌" : "";
-  descParts.push(`│  Status:      ${statusEmoji} ${statusLabel}`);
-  if (session.aircraft) descParts.push(`│  Aircraft:    ${session.aircraft}`);
+  // Build description (clean + calendar-friendly)
+  // Many calendar apps use proportional fonts and collapse/warp box drawing characters,
+  // so keep this plain, readable, and scannable.
+  const statusEmoji =
+    session.status === "confirmed" ? "✅" :
+    session.status === "tentative" ? "🟡" :
+    session.status === "completed" ? "🔵" :
+    session.status === "cancelled" ? "❌" : "";
+
+  const descLines = [];
+  descLines.push("NPPL (Microlight) Training");
+  descLines.push(isExam ? "Exam session" : "Flight session");
+  descLines.push("");
+  descLines.push(`Session: ${session.lessonType}`);
+  if (inst) descLines.push(`Instructor: ${inst}`);
+  descLines.push(`Status: ${statusEmoji} ${statusLabel}`);
+  if (session.aircraft) descLines.push(`Aircraft: ${session.aircraft}`);
+
   if (!isExam) {
-    descParts.push(`├${line}┤`);
-    const planStr = `Planned: ${durationHrs}h`;
-    const hobbsStr = session.hobbsLogged ? `  │  Hobbs: ${session.hobbsLogged}h` : "";
-    descParts.push(`│  ${planStr}${hobbsStr}`);
+    const planned = `${durationHrs}h planned`;
+    const hobbs = session.hobbsLogged ? `${session.hobbsLogged}h Hobbs logged` : "";
+    descLines.push(`Duration: ${planned}${hobbs ? " • " + hobbs : ""}`);
   }
+
   if (session.notes) {
-    descParts.push(`├${line}┤`);
-    descParts.push(`│  Notes:`);
-    session.notes.split("\n").forEach(l => descParts.push(`│  ${l}`));
+    descLines.push("");
+    descLines.push("Notes:");
+    session.notes.split("
+").forEach(l => {
+      const line = (l || "").trim();
+      if (line) descLines.push(`• ${line}`);
+    });
   }
-  descParts.push(`└${line}┘`);
-  const description = descParts.join("\\n");
+
+  const description = descLines.join("
+");
 
   const now = new Date();
   const stamp = now.getFullYear().toString() +
