@@ -87,6 +87,31 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 
 /* Closed day */
 .cal-closed { background: linear-gradient(135deg, #1a0808, #1f0a0a) !important; border-color: #7f1d1d !important; }
+
+
+/* Safe-area + responsive shell (iPhone notch + iPad) */
+.shell{
+  box-sizing:border-box;
+  width:100%;
+  max-width:720px;
+  margin:0 auto;
+  padding:16px;
+  padding-top: calc(16px + env(safe-area-inset-top));
+  padding-right: calc(16px + env(safe-area-inset-right));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  padding-left: calc(16px + env(safe-area-inset-left));
+}
+@media (min-width: 768px){
+  .shell{
+    max-width: 1000px;
+    padding:24px;
+    padding-top: calc(24px + env(safe-area-inset-top));
+    padding-right: calc(24px + env(safe-area-inset-right));
+    padding-bottom: calc(32px + env(safe-area-inset-bottom));
+    padding-left: calc(24px + env(safe-area-inset-left));
+  }
+}
+
 </style>
 </head>
 <body>
@@ -317,6 +342,7 @@ function render() {
   const remCol = done?"#ef4444":low?"#eab308":"#22c55e";
 
   document.getElementById("app").innerHTML = `
+    <div class="shell">
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div>
@@ -398,7 +424,8 @@ function render() {
       ${["all","confirmed","tentative","cancelled","completed","closed"].map(f => {
         const active = state.filter===f;
         const st = STATUSES.find(s=>s.v===f);
-        return `<button class="filter-btn ${active?'active':''}" style="${active&&st?`border-color:${st.c};background:${st.bg};color:${st.c}`:''}" onpointerup="setFilter('${f}')">${f==="all"?"All":st?st.l:f}</button>`;
+        return `<button class="filter-btn ${active?'active':''}" style="${active&&st?`border-color:${st.c};background:${st.bg};color:${st.c}`:''}" onpointerup="setFilter('${f}')">${f==="all"?"All":st?st.l:f}</button>
+    </div>`;
       }).join("")}
       <button class="filter-btn" style="padding:0 12px;border-radius:8px" onpointerup="toggleSort()">${state.sortAsc?"↑ Old":"↓ New"}</button>
     </div>
