@@ -10,6 +10,8 @@
 <title>Flight Log — NPPL Training</title>
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23030712' width='100' height='100' rx='20'/><text y='68' x='50' text-anchor='middle' font-size='55'>✈</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <style>
 :root {
   --bg: #030712; --surface: #0a0f1a; --surface2: #111827; --border: #1e293b;
@@ -200,19 +202,58 @@ const DEFAULT_SESSIONS = [];
 /* ═══════════════════════════════════════════
    STORAGE
    ═══════════════════════════════════════════ */
-function load() {
+/* ═══════════════════════════════════════════
+   STORAGE (Firebase Cloud Sync)
+   ═══════════════════════════════════════════ */
+// 1. PASTE YOUR FIREBASE CONFIG HERE:
+const firebaseConfig = {
+   apiKey: "AIzaSyAyH18OH7R8PN53teOE2XLsgOLG68ulaGc",
+  authDomain: "flight-log-3ffc0.firebaseapp.com",
+  projectId: "flight-log-3ffc0",
+  storageBucket: "flight-log-3ffc0.firebasestorage.app",
+  messagingSenderId: "92995886107",
+  appId: "1:92995886107:web:399964c02417b786516cbe"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+async function load() {
   try {
+    const docSnap = await db.collection("flightlog").doc("mysessions").get();
+    if (docSnap.exists) {
+      const data = docSnap.data();
+      if (data.sessions) state.sessions = data.sessions;
+    }
+  } catch(e) {
+    console.error("Cloud load failed, checking local backup:", e);
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) { const d = JSON.parse(raw); if (d.sessions) state.sessions = d.sessions; }
-  } catch(e) {}
+  }
 }
-function save() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessions: state.sessions, savedAt: new Date().toISOString() })); showSaved(); } catch(e) {}
+
+async function save() {
+  try {
+    // Save locally as a backup just in case
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessions: state.sessions, savedAt: new Date().toISOString() }));
+    
+    // Push to the cloud
+    await db.collection("flightlog").doc("mysessions").set({
+      sessions: state.sessions,
+      lastUpdated: new Date().toISOString()
+    });
+    showSaved();
+  } catch(e) { 
+    console.error("Cloud save failed:", e); 
+    alert("Saved locally, but failed to sync to the cloud. Check your connection.");
+  }
 }
+
 function showSaved() {
   const el = document.getElementById("save-indicator");
   if (!el) return;
-  el.textContent = "● Saved"; el.style.color = "#22c55e";
+  el.textContent = "● Cloud Synced"; el.style.color = "#3b82f6"; // Changed to blue to indicate cloud
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.textContent = ""; }, 2000);
 }
@@ -889,9 +930,14 @@ function showBootError(err) {
 window.addEventListener("error", (e) => showBootError(e.error || e.message));
 window.addEventListener("unhandledrejection", (e) => showBootError(e.reason));
 
-(function boot(){
+(async function boot(){
   try {
-    load();
+    // Show a quick loading state while fetching from cloud
+    const app = document.getElementById("app");
+    if (app) app.innerHTML = '<div style="padding:40px; text-align:center; color:#94a3b8; font-family:var(--mono);">Syncing with cloud...</div>';
+    
+    await load();
+    
     if (!Array.isArray(state.sessions) || state.sessions.length === 0) {
       state.sessions = Array.isArray(DEFAULT_SESSIONS) ? DEFAULT_SESSIONS.slice() : [];
     }
