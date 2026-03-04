@@ -283,7 +283,7 @@ function render() {
     }
 
     return `<div class="cal-day" style="background:${bg};border:${border};cursor:${wClosed?'default':'pointer'}" 
-      ${wClosed?'':`onpointerup="handleDayClick('${key}')"`}>
+      ${wClosed?'':`onclick="handleDayClick('${key}')"`}>
       <div style="font-size:9px;color:${closed?'#f87171':isToday?'#93c5fd':'#64748b'};font-weight:700;text-transform:uppercase">${DN[d.getDay()]}</div>
       <div style="font-size:18px;font-weight:800;color:${closed?'#fca5a5':isToday?'#fff':'#cbd5e1'};font-family:var(--mono);line-height:1.3">${d.getDate()}</div>
       <div style="font-size:8px;color:${closed?'#991b1b':'#475569'};margin-bottom:3px">${MN[d.getMonth()]}</div>
@@ -299,7 +299,7 @@ function render() {
   } else {
     listHTML = filtered.map(s => {
       if (s.status==="closed") {
-        return `<div class="card session-card" style="background:linear-gradient(135deg,#1a0808,#1f0a0a);border-color:#7f1d1d" onpointerup="openEdit('${s.id}')">
+        return `<div class="card session-card" style="background:linear-gradient(135deg,#1a0808,#1f0a0a);border-color:#7f1d1d" onclick="openEdit('${s.id}')">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
@@ -309,14 +309,14 @@ function render() {
               <div style="font-size:14px;font-weight:700;color:#f87171">🚫 Airfield Closed</div>
               ${s.notes?`<div style="margin-top:4px;font-size:11px;color:#991b1b;font-style:italic">${esc(s.notes)}</div>`:''}
             </div>
-            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#ef4444;font-size:13px;padding:0" onpointerup="event.stopPropagation();deleteSession('${s.id}')">✕</button>
+            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#ef4444;font-size:13px;padding:0" onclick="event.stopPropagation();deleteSession('${s.id}')">✕</button>
           </div>
         </div>`;
       }
       const canc = s.status==="cancelled";
       const inst = getInstructor(s);
       const isExam = s.lessonType.startsWith("Exam");
-      return `<div class="card session-card" style="${isExam?'background:linear-gradient(135deg,#0f1520,#151a2e);border-color:#2d2b55':''}${canc?';opacity:0.5':''}" onpointerup="openEdit('${s.id}')">
+      return `<div class="card session-card" style="${isExam?'background:linear-gradient(135deg,#0f1520,#151a2e);border-color:#2d2b55':''}${canc?';opacity:0.5':''}" onclick="openEdit('${s.id}')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
@@ -333,8 +333,8 @@ function render() {
             ${s.notes?`<div style="margin-top:5px;font-size:11px;color:#475569;font-style:italic;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${esc(s.notes)}</div>`:''}
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:14px;padding:0" onpointerup="event.stopPropagation();toggleStatus('${s.id}')">⟳</button>
-            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#ef4444;font-size:13px;padding:0" onpointerup="event.stopPropagation();deleteSession('${s.id}')">✕</button>
+            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:14px;padding:0" onclick="event.stopPropagation();toggleStatus('${s.id}')">⟳</button>
+            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#ef4444;font-size:13px;padding:0" onclick="event.stopPropagation();deleteSession('${s.id}')">✕</button>
           </div>
         </div>
       </div>`;
@@ -360,12 +360,12 @@ function render() {
         </div>
       </div>
       <div style="position:relative" id="new-btn-wrap">
-        <button class="btn44" style="padding:0 20px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 4px 16px #2563eb33" onpointerup="toggleNewMenu()">+ New</button>
+        <button class="btn44" style="padding:0 20px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 4px 16px #2563eb33" onclick="toggleNewMenu()">+ New</button>
         <div id="new-menu" style="display:none">
-          <div class="new-menu-backdrop" onpointerup="toggleNewMenu()"></div>
+          <div class="new-menu-backdrop" onclick="toggleNewMenu()"></div>
           <div class="new-menu">
-            <div class="new-menu-item" style="color:#e2e8f0;border-bottom:1px solid #1e293b" onpointerup="openNewSession()"><span style="font-size:18px">✈</span> New Session</div>
-            <div class="new-menu-item" style="color:#f87171" onpointerup="openNewClosure()"><span style="font-size:18px">🚫</span> Mark Day Closed</div>
+            <div class="new-menu-item" style="color:#e2e8f0;border-bottom:1px solid #1e293b" onclick="openNewSession()"><span style="font-size:18px">✈</span> New Session</div>
+            <div class="new-menu-item" style="color:#f87171" onclick="openNewClosure()"><span style="font-size:18px">🚫</span> Mark Day Closed</div>
           </div>
         </div>
       </div>
@@ -403,7 +403,7 @@ function render() {
       ${done?'<div style="margin-top:8px;padding:6px 10px;background:#450a0a;border:1px solid #ef444433;border-radius:8px;font-size:11px;color:#fca5a5;text-align:center">Block used — reset for new block</div>':''}
       ${low&&!done?`<div style="margin-top:8px;padding:6px 10px;background:#422006;border:1px solid #eab30833;border-radius:8px;font-size:11px;color:#fde68a;text-align:center">${rem.toFixed(1)} hrs remaining</div>`:''}
       <div style="display:flex;justify-content:flex-end;margin-top:8px">
-        <button class="btn44" id="reset-btn" style="padding:0 16px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:600" onpointerup="resetBlock()">New Block (Reset)</button>
+        <button class="btn44" id="reset-btn" style="padding:0 16px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:600" onclick="resetBlock()">New Block (Reset)</button>
       </div>
     </div>
 
@@ -428,10 +428,10 @@ function render() {
       ${["all","confirmed","tentative","cancelled","completed","closed"].map(f => {
         const active = state.filter===f;
         const st = STATUSES.find(s=>s.v===f);
-        return `<button class="filter-btn ${active?'active':''}" style="${active&&st?`border-color:${st.c};background:${st.bg};color:${st.c}`:''}" onpointerup="setFilter('${f}')">${f==="all"?"All":st?st.l:f}</button>
+        return `<button class="filter-btn ${active?'active':''}" style="${active&&st?`border-color:${st.c};background:${st.bg};color:${st.c}`:''}" onclick="setFilter('${f}')">${f==="all"?"All":st?st.l:f}</button>
     </div>`;
       }).join("")}
-      <button class="filter-btn" style="padding:0 12px;border-radius:8px" onpointerup="toggleSort()">${state.sortAsc?"↑ Old":"↓ New"}</button>
+      <button class="filter-btn" style="padding:0 12px;border-radius:8px" onclick="toggleSort()">${state.sortAsc?"↑ Old":"↓ New"}</button>
     </div>
 
     <!-- Sessions -->
@@ -524,10 +524,10 @@ function renderForm() {
         <div style="margin-bottom:16px">
           <label class="label">Instructor</label>
           <div style="display:flex;flex-direction:column;gap:8px">
-            ${INSTRUCTORS.map(name=>`<div class="radio-btn ${f.instructor===name?'selected':''}" role="button" onpointerup="setInstructor('${name}')"><div class="radio-circle"><div class="radio-dot"></div></div><span>${name}</span></div>`).join("")}
-            <div class="radio-btn ${f.instructor==='__custom__'?'selected':''}" role="button" onpointerup="setInstructor('__custom__')"><div class="radio-circle"><div class="radio-dot"></div></div><span>Other...</span></div>
+            ${INSTRUCTORS.map(name=>`<div class="radio-btn ${f.instructor===name?'selected':''}" role="button" onclick="setInstructor('${name}')"><div class="radio-circle"><div class="radio-dot"></div></div><span>${name}</span></div>`).join("")}
+            <div class="radio-btn ${f.instructor==='__custom__'?'selected':''}" role="button" onclick="setInstructor('__custom__')"><div class="radio-circle"><div class="radio-dot"></div></div><span>Other...</span></div>
             ${f.instructor==='__custom__'?`<input id="f-custom-inst" value="${esc(f.customInstructor||'')}" placeholder="Type instructor name">`:''}
-            ${f.instructor?`<div role="button" style="padding:10px 0;color:#475569;font-size:13px;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent" onpointerup="setInstructor('')">Clear selection</div>`:''}
+            ${f.instructor?`<div role="button" style="padding:10px 0;color:#475569;font-size:13px;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="setInstructor('')">Clear selection</div>`:''}
           </div>
         </div>
         <div style="margin-bottom:16px"><label class="label">Aircraft / Reg</label><input id="f-aircraft" value="${esc(f.aircraft||'')}" placeholder="e.g. G-CXYZ"></div>
@@ -541,14 +541,14 @@ function renderForm() {
   }
 
   if (formState.editing) {
-    body += `<button class="btn44" style="width:100%;padding:0 16px;min-height:48px;background:#450a0a;border:1px solid #ef444433;border-radius:10px;color:#fca5a5;font-size:14px;font-weight:600;margin-top:8px" onpointerup="deleteAndClose()">Delete ${isClosure?'Closure':'Session'}</button>`;
+    body += `<button class="btn44" style="width:100%;padding:0 16px;min-height:48px;background:#450a0a;border:1px solid #ef444433;border-radius:10px;color:#fca5a5;font-size:14px;font-weight:600;margin-top:8px" onclick="deleteAndClose()">Delete ${isClosure?'Closure':'Session'}</button>`;
   }
 
   overlay.innerHTML = `
     <div class="form-header">
-      <button class="btn44" style="padding:0 4px;background:transparent;border:none;color:#94a3b8;font-size:15px;font-weight:500" onpointerup="closeForm()">Cancel</button>
+      <button class="btn44" style="padding:0 4px;background:transparent;border:none;color:#94a3b8;font-size:15px;font-weight:500" onclick="closeForm()">Cancel</button>
       <h2 style="font-size:16px;font-weight:700;color:${isClosure?'#f87171':'#f1f5f9'}">${isClosure?'🚫 Mark Closed':formState.editing?'Edit Session':'New Session'}</h2>
-      <button class="btn44" style="padding:0 18px;background:#2563eb;border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:700" onpointerup="saveForm()">Save</button>
+      <button class="btn44" style="padding:0 18px;background:#2563eb;border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:700" onclick="saveForm()">Save</button>
     </div>
     <div class="form-body">${body}</div>
   `;
