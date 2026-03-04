@@ -130,6 +130,35 @@ const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","D
 
 let state = { sessions: [], filter: "all", sortAsc: true };
 
+/* Defaults & empty templates (prevent ReferenceErrors on first run) */
+const EMPTY_SESSION = {
+  id: null,
+  date: "",
+  time: "",
+  lessonType: "Ex 1 – Air Experience",
+  status: "tentative",
+  instructor: "",
+  customInstructor: "",
+  aircraft: "",
+  durationHrs: 1.5,
+  hobbsLogged: "",
+  notes: "",
+};
+
+const EMPTY_CLOSURE = {
+  id: null,
+  date: "",
+  time: "00:00",
+  lessonType: "Airfield Closed",
+  status: "closed",
+  notes: "",
+};
+
+/* Keep this empty by default. Add sample sessions here if you want. */
+const DEFAULT_SESSIONS = [];
+
+
+
 /* ═══════════════════════════════════════════
    STORAGE
    ═══════════════════════════════════════════ */
@@ -591,10 +620,38 @@ window.handleDayClick = handleDayClick;
 /* ═══════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════ */
-load();
-if (state.sessions.length === 0) state.sessions = DEFAULT_SESSIONS;
-render();
-</script>
+
+function showBootError(err) {
+  try {
+    const app = document.getElementById("app");
+    if (!app) return;
+    const msg = (err && (err.stack || err.message)) ? (err.stack || err.message) : String(err);
+    app.innerHTML = `
+      <div style="padding:16px;max-width:720px;margin:0 auto;color:#fecaca;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">
+        <div style="font-weight:700;margin-bottom:8px;">App failed to start</div>
+        <div style="white-space:pre-wrap;line-height:1.35;">${msg}</div>
+        <div style="margin-top:12px;color:#fca5a5;font-size:12px;">
+          Tip: If this is added to your iPhone Home Screen, open it once in Safari first after editing, then re-add to Home Screen.
+        </div>
+      </div>`;
+  } catch (_) {}
+}
+
+window.addEventListener("error", (e) => showBootError(e.error || e.message));
+window.addEventListener("unhandledrejection", (e) => showBootError(e.reason));
+
+(function boot(){
+  try {
+    load();
+    if (!Array.isArray(state.sessions) || state.sessions.length === 0) {
+      state.sessions = Array.isArray(DEFAULT_SESSIONS) ? DEFAULT_SESSIONS.slice() : [];
+    }
+    render();
+  } catch (e) {
+    showBootError(e);
+    console.error(e);
+  }
+})();</script>
 
 <!-- Form overlay (outside app container) -->
 <div id="form-overlay" class="form-overlay"></div>
