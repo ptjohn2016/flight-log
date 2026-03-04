@@ -12,6 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <style>
 :root {
   --bg: #030712; --surface: #0a0f1a; --surface2: #111827; --border: #1e293b;
@@ -130,6 +131,13 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 </style>
 </head>
 <body>
+<div id="pin-overlay" style="position:fixed;inset:0;background:#030712;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+  <div style="font-size:48px;margin-bottom:12px;">✈</div>
+  <h2 style="color:#e2e8f0;margin-bottom:24px;font-family:var(--font);font-weight:700;letter-spacing:-0.5px;">Flight Log Access</h2>
+  <input type="password" id="pin-input" inputmode="numeric" pattern="[0-9]*" placeholder="••••" maxlength="4" style="width:200px;text-align:center;font-size:32px;letter-spacing:12px;margin-bottom:16px;background:#0f172a;border:2px solid #1e293b;border-radius:12px;color:#fff;outline:none;padding:12px;">
+  <button onclick="checkPin()" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;padding:14px 24px;border-radius:12px;font-weight:700;font-size:16px;width:200px;box-shadow:0 4px 16px #2563eb33;cursor:pointer;-webkit-tap-highlight-color:transparent;">Unlock</button>
+  <div id="pin-error" style="color:#ef4444;margin-top:16px;font-size:14px;font-weight:600;display:none;background:#450a0a;padding:6px 12px;border-radius:8px;border:1px solid #7f1d1d;">Incorrect PIN</div>
+</div>
 
 <div class="container" id="app"></div>
 
