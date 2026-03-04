@@ -657,6 +657,7 @@ function setFilter(f) { state.filter=f; render(); }
 function toggleSort() { state.sortAsc=!state.sortAsc; render(); }
 
 function deleteSession(id) {
+  if (!confirm("Are you sure you want to delete this session?")) return;
   state.sessions = state.sessions.filter(s=>s.id!==id);
   save(); render();
 }
@@ -839,6 +840,7 @@ function saveForm() {
 }
 
 function deleteAndClose() {
+  if (!confirm("Are you sure you want to delete this session?")) return;
   if (formState.editing) {
     state.sessions = state.sessions.filter(s => s.id !== formState.editing);
     save();
