@@ -172,7 +172,7 @@ let state = { sessions: [], filter: "all", sortAsc: true };
 const EMPTY_SESSION = {
   id: null,
   date: "",
-  time: "",
+  time: "12:00",
   lessonType: "Ex 1 – Air Experience",
   status: "tentative",
   instructor: "",
@@ -282,20 +282,29 @@ function generateICS(session) {
   const statusLabel = getStatus(session.status).l;
   let summary = isExam ? `📝 ${session.lessonType}` : `✈ ${session.lessonType}`;
 
-  // Build description with all details
+  // Build description with all details — formatted nicely
+  const line = "───────────────────────────────────";
   const descParts = [];
-  descParts.push(`NPPL (Microlight) Training`);
-  descParts.push(`Session: ${session.lessonType}`);
-  descParts.push(`Status: ${statusLabel}`);
-  if (inst) descParts.push(`Instructor: ${inst}`);
-  if (session.aircraft) descParts.push(`Aircraft: ${session.aircraft}`);
-  if (!isExam) descParts.push(`Planned Duration: ${durationHrs}h`);
-  if (session.hobbsLogged) descParts.push(`Hobbs Logged: ${session.hobbsLogged}h`);
-  if (session.notes) {
-    descParts.push("");
-    descParts.push(`Notes:`);
-    descParts.push(session.notes);
+  descParts.push(`┌${line}┐`);
+  descParts.push(`│  ✈️  NPPL (MICROLIGHT) TRAINING`);
+  descParts.push(`├${line}┤`);
+  descParts.push(`│  Session:     ${session.lessonType}`);
+  if (inst) descParts.push(`│  Instructor:  ${inst}`);
+  const statusEmoji = session.status === "confirmed" ? "✅" : session.status === "tentative" ? "🟡" : session.status === "completed" ? "🔵" : session.status === "cancelled" ? "❌" : "";
+  descParts.push(`│  Status:      ${statusEmoji} ${statusLabel}`);
+  if (session.aircraft) descParts.push(`│  Aircraft:    ${session.aircraft}`);
+  if (!isExam) {
+    descParts.push(`├${line}┤`);
+    const planStr = `Planned: ${durationHrs}h`;
+    const hobbsStr = session.hobbsLogged ? `  │  Hobbs: ${session.hobbsLogged}h` : "";
+    descParts.push(`│  ${planStr}${hobbsStr}`);
   }
+  if (session.notes) {
+    descParts.push(`├${line}┤`);
+    descParts.push(`│  Notes:`);
+    session.notes.split("\n").forEach(l => descParts.push(`│  ${l}`));
+  }
+  descParts.push(`└${line}┘`);
   const description = descParts.join("\\n");
 
   const now = new Date();
@@ -780,6 +789,7 @@ function closeForm() {
   document.getElementById("form-overlay").classList.remove("open");
 }
 function setInstructor(v) {
+  readForm(); // preserve date, time, and other fields before re-render
   formState.data.instructor = v;
   if (v !== "__custom__") formState.data.customInstructor = "";
   renderForm();
