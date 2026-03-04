@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Flight Log">
+<meta name="theme-color" content="#030712">
+<title>Flight Log — NPPL Training</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23030712' width='100' height='100' rx='20'/><text y='68' x='50' text-anchor='middle' font-size='55'>✈</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #030712; --surface: #0a0f1a; --surface2: #111827; --border: #1e293b;
+  --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b; --text4: #475569;
+  --blue: #2563eb; --blue2: #3b82f6; --green: #22c55e; --yellow: #eab308;
+  --red: #ef4444; --red2: #f87171;
+  --font: 'Outfit', 'DM Sans', -apple-system, system-ui, sans-serif;
+  --mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { 
+  overflow-x: hidden; width: 100%; background: var(--bg); color: var(--text);
+  font-family: var(--font); -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+::-webkit-scrollbar { display: none; }
+input, select, textarea {
+  box-sizing: border-box; max-width: 100%; font-family: var(--mono);
+  font-size: 16px; /* prevents iOS zoom */
+  color: var(--text); background: #0f172a; border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px; outline: none; min-height: 48px; width: 100%;
+}
+select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+}
+textarea { resize: vertical; min-height: 88px; }
+button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cursor: pointer; }
+.label { display: block; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600; }
+.container { max-width: 600px; margin: 0 auto; padding: 16px 12px 80px; overflow-x: hidden; }
+.card { background: linear-gradient(135deg, var(--surface), var(--surface2)); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+.btn44 { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+/* Badge */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
+.badge .dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+/* Calendar */
+.cal-strip { display: flex; gap: 6px; overflow-x: auto; padding: 0 14px 8px; -webkit-overflow-scrolling: touch; }
+.cal-day { flex-shrink: 0; width: 64px; border-radius: 12px; padding: 8px 2px 6px; text-align: center; min-height: 82px; position: relative; -webkit-tap-highlight-color: transparent; }
+
+/* Session card */
+.session-card { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color 0.2s; }
+
+/* Filters */
+.filters { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; margin-bottom: 14px; }
+.filter-btn { padding: 0 14px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: capitalize; flex-shrink: 0; min-height: 36px; border: 1px solid var(--border); background: transparent; color: var(--text3); }
+.filter-btn.active { border-color: var(--blue2); background: #0c1929; color: var(--blue2); }
+
+/* Form overlay */
+.form-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: none; flex-direction: column; width: 100%; max-width: 100vw; overflow-x: hidden; }
+.form-overlay.open { display: flex; }
+.form-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); padding-top: max(12px, env(safe-area-inset-top)); background: var(--bg); flex-shrink: 0; }
+.form-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px; -webkit-overflow-scrolling: touch; padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+
+/* New menu */
+.new-menu { position: absolute; top: 100%; right: 0; margin-top: 6px; z-index: 100; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); overflow: hidden; min-width: 200px; }
+.new-menu-item { padding: 14px 16px; font-size: 15px; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 10px; }
+.new-menu-backdrop { position: fixed; inset: 0; z-index: 99; }
+
+/* Radio buttons */
+.radio-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px; background: #0f172a; border: 1px solid var(--border); border-radius: 10px; color: var(--text2); font-size: 16px; min-height: 52px; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; text-align: left; font-family: var(--font); }
+.radio-btn.selected { background: #172554; border: 2px solid var(--blue2); color: #93c5fd; font-weight: 600; }
+.radio-circle { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #334155; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.radio-btn.selected .radio-circle { border-color: var(--blue2); background: var(--blue2); }
+.radio-dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; display: none; }
+.radio-btn.selected .radio-dot { display: block; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.fade-in { animation: fadeIn 0.3s ease; }
+
+/* Closed day */
+.cal-closed { background: linear-gradient(135deg, #1a0808, #1f0a0a) !important; border-color: #7f1d1d !important; }
+</style>
+</head>
+<body>
+
+<div class="container" id="app"></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   DATA & CONSTANTS
+   ═══════════════════════════════════════════ */
+const STORAGE_KEY = "flight-log-v1";
+const LESSON_TYPES = [
+  "Ex 1 – Air Experience","Ex 2 – Aircraft Parts, Controls & Systems","Ex 3 – Preparation for Flight & Actions After",
+  "Ex 4 – Effects of Controls","Ex 5 – Taxiing",
+  "Ex 6 – Straight & Level Flight","Ex 7 – Basic Climbing & Descending","Ex 8 – Performance Climbing & Descending",
+  "Ex 9a – Turning Flight","Ex 9b – Compass Turns",
+  "Ex 10a – Stalling & Recovery","Ex 10b – Spin Avoidance","Ex 11 – Unusual Attitudes & Recovery",
+  "Ex 12 – Take-Off & Climb to Downwind","Ex 13 – Circuit, Approach & Landing",
+  "Ex 14 – Advanced Turning","Ex 15 – Crosswind Operations",
+  "Ex 16a – Forced Landings","Ex 16b – Operation at Minimum Level",
+  "Ex 17a – First Solo","Ex 17b – Solo Consolidation","Ex 17c – Dual Revision for GST",
+  "Ex 18a – Dual Navigation","Ex 18b – Dual Nav (Min Level & Lost Proc)",
+  "Ex 18c – Solo Nav (1st Qualifying XC)","Ex 18d – Solo Nav (2nd Qualifying XC)",
+  "General Skills Test (GST)","Ground Oral Examination",
+  "Ground School","Pre-Flight Briefing","Other",
+];
+const EXAM_TYPES = ["Exam – Aviation Law","Exam – Meteorology","Exam – Navigation","Exam – Human Performance & Limitations","Exam – Aircraft Technical"];
+const ALL_TYPES = [...LESSON_TYPES, ...EXAM_TYPES];
+const INSTRUCTORS = ["Paul Haskins", "Mark Peters"];
+const STATUSES = [
+  { v: "confirmed", l: "Confirmed", c: "#22c55e", bg: "#052e16" },
+  { v: "tentative", l: "Tentative", c: "#eab308", bg: "#422006" },
+  { v: "cancelled", l: "Cancelled", c: "#ef4444", bg: "#450a0a" },
+  { v: "completed", l: "Completed", c: "#3b82f6", bg: "#0c1929" },
+  { v: "closed", l: "Closed", c: "#f87171", bg: "#3b0a0a" },
+];
+const BOOKING_STATUSES = STATUSES.filter(s => s.v !== "closed");
+const STATUS_ORDER = ["tentative","confirmed","completed","cancelled"];
+const DN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+let state = { sessions: [], filter: "all", sortAsc: true };
+
+/* ═══════════════════════════════════════════
+   STORAGE
+   ═══════════════════════════════════════════ */
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { const d = JSON.parse(raw); if (d.sessions) state.sessions = d.sessions; }
+  } catch(e) {}
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessions: state.sessions, savedAt: new Date().toISOString() })); showSaved(); } catch(e) {}
+}
+function showSaved() {
+  const el = document.getElementById("save-indicator");
+  if (!el) return;
+  el.textContent = "● Saved"; el.style.color = "#22c55e";
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.textContent = ""; }, 2000);
+}
+
+/* ═══════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════ */
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmtDate(d) { if (!d) return ""; const dt = new Date(d+"T00:00:00"); return dt.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}); }
+function fmtTime(t) { if (!t||t==="00:00") return ""; const [h,m]=t.split(":"); const hr=parseInt(h); return `${hr%12||12}:${m} ${hr>=12?"PM":"AM"}`; }
+function dateKey(d) { return d.toISOString().split("T")[0]; }
+function isSameDay(a,b) { return dateKey(a)===dateKey(b); }
+function isWeekendClosed(d) { const day = typeof d==="string" ? new Date(d+"T00:00:00").getDay() : d.getDay(); return day===0||day===1; }
+function esc(s) { const d=document.createElement("div"); d.textContent=s; return d.innerHTML; }
+function getStatus(v) { return STATUSES.find(s=>s.v===v)||STATUSES[0]; }
+function badge(status, small) {
+  const s = getStatus(status);
+  return `<span class="badge" style="color:${s.c};background:${s.bg};border:1px solid ${s.c}30;${small?'font-size:9px;padding:2px 7px':'font-size:10px;padding:3px 10px'}"><span class="dot" style="background:${s.c}"></span>${s.l}</span>`;
+}
+function getInstructor(s) { return s.instructor==="__custom__" ? s.customInstructor : s.instructor; }
+function hoursUsed() { return state.sessions.filter(s=>s.status!=="cancelled"&&s.status!=="closed"&&s.hobbsLogged).reduce((sum,s)=>sum+(parseFloat(s.hobbsLogged)||0),0); }
+
+/* ═══════════════════════════════════════════
+   RENDER
+   ═══════════════════════════════════════════ */
+function render() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const used = hoursUsed();
+  const total = 10;
+  const rem = Math.max(total-used,0);
+  const pct = Math.min((used/total)*100,100);
+  const low = rem<=2&&rem>0;
+  const done = rem<=0&&used>0;
+
+  const upcoming = state.sessions.filter(s=>(s.status==="confirmed"||s.status==="tentative")&&new Date(s.date)>=today).length;
+  const completed = state.sessions.filter(s=>s.status==="completed").length;
+  const cancelled = state.sessions.filter(s=>s.status==="cancelled").length;
+
+  const filtered = state.sessions
+    .filter(s => state.filter==="all" || s.status===state.filter)
+    .sort((a,b) => {
+      const da=new Date(a.date+"T"+(a.time||"00:00")), db=new Date(b.date+"T"+(b.time||"00:00"));
+      return state.sortAsc ? da-db : db-da;
+    });
+
+  // Calendar days
+  const days = [];
+  for (let i=0;i<14;i++) { const d=new Date(today); d.setDate(today.getDate()+i); days.push(d); }
+  const byDate = {};
+  state.sessions.forEach(s => { if(!byDate[s.date]) byDate[s.date]=[]; byDate[s.date].push(s); });
+
+  let calHTML = days.map(d => {
+    const key = dateKey(d);
+    const isToday = isSameDay(d,today);
+    const wClosed = isWeekendClosed(d);
+    const ds = byDate[key]||[];
+    const hasClosure = ds.some(s=>s.status==="closed");
+    const closed = wClosed||hasClosure;
+    const lessons = ds.filter(s=>s.status!=="closed");
+    const hasLesson = lessons.length>0;
+    const closedLabel = wClosed ? (d.getDay()===0?"Private hire":"Closed") : (hasClosure ? (ds.find(s=>s.status==="closed")?.notes||"Closed").slice(0,12) : "");
+
+    let bg, border;
+    if (closed) { bg="linear-gradient(135deg,#1a0808,#1f0a0a)"; border="1px solid #7f1d1d"; }
+    else if (isToday) { bg="linear-gradient(135deg,#1e3a5f,#172554)"; border="2px solid #3b82f6"; }
+    else if (hasLesson) { bg="linear-gradient(135deg,#0f172a,#1a1a2e)"; border="1px solid #1e3a5f"; }
+    else { bg="#080d17"; border="1px solid #151d2e"; }
+
+    let inner = "";
+    if (closed) {
+      inner = `<div style="font-size:7px;color:#f87171;font-weight:700;line-height:1.2;padding:1px 3px">${esc(closedLabel)}</div>`;
+    } else if (hasLesson) {
+      inner = lessons.slice(0,2).map(s => {
+        const st=getStatus(s.status); const isExam=s.lessonType.startsWith("Exam");
+        return `<div style="font-size:7px;font-weight:700;color:${st.c};background:${st.bg};padding:1px 3px;border-radius:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${isExam?`border:1px dashed ${st.c}44`:''}">${isExam?"📝":"✈"} ${fmtTime(s.time)}</div>`;
+      }).join("");
+    }
+
+    return `<div class="cal-day" style="background:${bg};border:${border};cursor:${wClosed?'default':'pointer'}" 
+      ${wClosed?'':`onpointerup="handleDayClick('${key}')"`}>
+      <div style="font-size:9px;color:${closed?'#f87171':isToday?'#93c5fd':'#64748b'};font-weight:700;text-transform:uppercase">${DN[d.getDay()]}</div>
+      <div style="font-size:18px;font-weight:800;color:${closed?'#fca5a5':isToday?'#fff':'#cbd5e1'};font-family:var(--mono);line-height:1.3">${d.getDate()}</div>
+      <div style="font-size:8px;color:${closed?'#991b1b':'#475569'};margin-bottom:3px">${MN[d.getMonth()]}</div>
+      <div style="display:flex;flex-direction:column;gap:2px;align-items:center">${inner}</div>
+      ${isToday?'<div style="position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:#3b82f6;box-shadow:0 0 6px #3b82f6"></div>':''}
+    </div>`;
+  }).join("");
+
+  // Session list
+  let listHTML = "";
+  if (filtered.length===0) {
+    listHTML = '<div style="text-align:center;padding:40px;color:#334155;font-size:13px">No sessions. Tap + to add one.</div>';
+  } else {
+    listHTML = filtered.map(s => {
+      if (s.status==="closed") {
+        return `<div class="card session-card" style="background:linear-gradient(135deg,#1a0808,#1f0a0a);border-color:#7f1d1d" onpointerup="openEdit('${s.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span style="font-family:var(--mono);font-size:12px;font-weight:600;color:#fca5a5">${fmtDate(s.date)}</span>
+                ${badge("closed",true)}
+              </div>
+              <div style="font-size:14px;font-weight:700;color:#f87171">🚫 Airfield Closed</div>
+              ${s.notes?`<div style="margin-top:4px;font-size:11px;color:#991b1b;font-style:italic">${esc(s.notes)}</div>`:''}
+            </div>
+            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#ef4444;font-size:13px;padding:0" onpointerup="event.stopPropagation();deleteSession('${s.id}')">✕</button>
+          </div>
+        </div>`;
+      }
+      const canc = s.status==="cancelled";
+      const inst = getInstructor(s);
+      const isExam = s.lessonType.startsWith("Exam");
+      return `<div class="card session-card" style="${isExam?'background:linear-gradient(135deg,#0f1520,#151a2e);border-color:#2d2b55':''}${canc?';opacity:0.5':''}" onpointerup="openEdit('${s.id}')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
+              <span style="font-family:var(--mono);font-size:12px;font-weight:600;color:#cbd5e1">${fmtDate(s.date)} · ${fmtTime(s.time)}</span>
+              ${badge(s.status,true)}
+            </div>
+            <div style="font-size:15px;font-weight:700;color:${isExam?'#c4b5fd':'#f1f5f9'};margin-bottom:4px;${canc?'text-decoration:line-through':''}">${isExam?'📝 ':''}${esc(s.lessonType)}</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:#64748b">
+              ${inst?`<span>👤 ${esc(inst)}</span>`:''}
+              ${s.aircraft?`<span style="font-family:var(--mono);font-size:10px">🛩 ${esc(s.aircraft)}</span>`:''}
+              ${!isExam?`<span>⏱ ${s.durationHrs}h</span>`:''}
+              ${s.hobbsLogged&&!canc?`<span style="color:#3b82f6;font-weight:600">✓ ${s.hobbsLogged}h</span>`:''}
+            </div>
+            ${s.notes?`<div style="margin-top:5px;font-size:11px;color:#475569;font-style:italic;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${esc(s.notes)}</div>`:''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:14px;padding:0" onpointerup="event.stopPropagation();toggleStatus('${s.id}')">⟳</button>
+            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#ef4444;font-size:13px;padding:0" onpointerup="event.stopPropagation();deleteSession('${s.id}')">✕</button>
+          </div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  // Gauge color
+  const gaugeCol = done?"linear-gradient(90deg,#ef4444,#dc2626)":low?"linear-gradient(90deg,#eab308,#f59e0b)":"linear-gradient(90deg,#2563eb,#3b82f6)";
+  const remCol = done?"#ef4444":low?"#eab308":"#22c55e";
+
+  document.getElementById("app").innerHTML = `
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:22px">✈</span>
+          <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;background:linear-gradient(135deg,#e2e8f0,#94a3b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">FLIGHT LOG</h1>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+          <p style="font-size:11px;color:#475569">NPPL (Microlight) Training</p>
+          <span id="save-indicator" style="font-size:9px"></span>
+        </div>
+      </div>
+      <div style="position:relative" id="new-btn-wrap">
+        <button class="btn44" style="padding:0 20px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 4px 16px #2563eb33" onpointerup="toggleNewMenu()">+ New</button>
+        <div id="new-menu" style="display:none">
+          <div class="new-menu-backdrop" onpointerup="toggleNewMenu()"></div>
+          <div class="new-menu">
+            <div class="new-menu-item" style="color:#e2e8f0;border-bottom:1px solid #1e293b" onpointerup="openNewSession()"><span style="font-size:18px">✈</span> New Session</div>
+            <div class="new-menu-item" style="color:#f87171" onpointerup="openNewClosure()"><span style="font-size:18px">🚫</span> Mark Day Closed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="card" style="padding:14px 0 10px;margin-bottom:12px">
+      <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;margin-bottom:10px;padding-left:14px;display:flex;align-items:center;gap:6px">
+        <span style="font-size:14px">📅</span> Next 2 Weeks
+      </div>
+      <div class="cal-strip">${calHTML}</div>
+      <div style="display:flex;gap:10px;padding-left:14px;padding-top:4px;flex-wrap:wrap">
+        <span style="font-size:9px;color:#475569">✈ Flight</span>
+        <span style="font-size:9px;color:#475569">📝 Exam</span>
+        <span style="font-size:9px;color:#3b82f6">■ Today</span>
+        <span style="font-size:9px;color:#f87171">■ Unavailable</span>
+      </div>
+    </div>
+
+    <!-- Hour Block -->
+    <div class="card" style="margin-bottom:12px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px">
+        <div>
+          <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin-bottom:2px">Hour Block</div>
+          <div style="font-size:26px;font-weight:800;color:#e2e8f0;font-family:var(--mono);line-height:1">${used.toFixed(1)}<span style="font-size:14px;color:#475569;font-weight:400"> / ${total} hrs</span></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:${remCol}">${rem.toFixed(1)}</div>
+          <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px">left</div>
+        </div>
+      </div>
+      <div style="width:100%;height:8px;background:#1e293b;border-radius:8px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;border-radius:8px;transition:width 0.5s;background:${gaugeCol}"></div>
+      </div>
+      ${done?'<div style="margin-top:8px;padding:6px 10px;background:#450a0a;border:1px solid #ef444433;border-radius:8px;font-size:11px;color:#fca5a5;text-align:center">Block used — reset for new block</div>':''}
+      ${low&&!done?`<div style="margin-top:8px;padding:6px 10px;background:#422006;border:1px solid #eab30833;border-radius:8px;font-size:11px;color:#fde68a;text-align:center">${rem.toFixed(1)} hrs remaining</div>`:''}
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button class="btn44" id="reset-btn" style="padding:0 16px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:600" onpointerup="resetBlock()">New Block (Reset)</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid3" style="margin-bottom:14px">
+      <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;text-align:center">
+        <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:2px">📅 Upcoming</div>
+        <div style="font-size:20px;font-weight:700;color:#e2e8f0;font-family:var(--mono)">${upcoming}</div>
+      </div>
+      <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;text-align:center">
+        <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:2px">✓ Done</div>
+        <div style="font-size:20px;font-weight:700;color:#e2e8f0;font-family:var(--mono)">${completed}</div>
+      </div>
+      <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;text-align:center">
+        <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:2px">✕ Cancelled</div>
+        <div style="font-size:20px;font-weight:700;color:#e2e8f0;font-family:var(--mono)">${cancelled}</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      ${["all","confirmed","tentative","cancelled","completed","closed"].map(f => {
+        const active = state.filter===f;
+        const st = STATUSES.find(s=>s.v===f);
+        return `<button class="filter-btn ${active?'active':''}" style="${active&&st?`border-color:${st.c};background:${st.bg};color:${st.c}`:''}" onpointerup="setFilter('${f}')">${f==="all"?"All":st?st.l:f}</button>`;
+      }).join("")}
+      <button class="filter-btn" style="padding:0 12px;border-radius:8px" onpointerup="toggleSort()">${state.sortAsc?"↑ Old":"↓ New"}</button>
+    </div>
+
+    <!-- Sessions -->
+    <div style="display:flex;flex-direction:column;gap:8px">${listHTML}</div>
+  `;
+}
+
+/* ═══════════════════════════════════════════
+   ACTIONS
+   ═══════════════════════════════════════════ */
+function toggleNewMenu() {
+  const m = document.getElementById("new-menu");
+  if (m) m.style.display = m.style.display==="none"?"block":"none";
+}
+function setFilter(f) { state.filter=f; render(); }
+function toggleSort() { state.sortAsc=!state.sortAsc; render(); }
+
+function deleteSession(id) {
+  state.sessions = state.sessions.filter(s=>s.id!==id);
+  save(); render();
+}
+function toggleStatus(id) {
+  state.sessions = state.sessions.map(s => {
+    if (s.id!==id||s.status==="closed") return s;
+    const i = STATUS_ORDER.indexOf(s.status);
+    return {...s, status: STATUS_ORDER[(i+1)%STATUS_ORDER.length]};
+  });
+  save(); render();
+}
+function resetBlock() {
+  if (!confirm("Clear all logged hours and start a fresh 10-hour block?")) return;
+  state.sessions = state.sessions.map(s=>({...s, hobbsLogged:""}));
+  save(); render();
+}
+
+function handleDayClick(dateStr) {
+  const ds = state.sessions.filter(s=>s.date===dateStr);
+  const nonClosed = ds.filter(s=>s.status!=="closed");
+  const closures = ds.filter(s=>s.status==="closed");
+  if (nonClosed.length===1&&closures.length===0) openEdit(nonClosed[0].id);
+  else if (closures.length===1&&nonClosed.length===0) openEdit(closures[0].id);
+  else if (ds.length===0) openNewSession(dateStr);
+}
+
+/* ═══════════════════════════════════════════
+   FORM
+   ═══════════════════════════════════════════ */
+let formState = { mode: "session", editing: null, data: {} };
+
+function buildTypeOptions() {
+  const groups = [
+    { label: "Phase 1: Familiarisation", test: t => /^Ex [1-5]\b/.test(t) },
+    { label: "Phase 2: Basic Manoeuvres", test: t => /^Ex [6-9]/.test(t) },
+    { label: "Phase 3: Circuit & Emergencies", test: t => /^Ex 1[0-5]/.test(t) },
+    { label: "Phase 4: Solo", test: t => /^Ex 1[6-7]/.test(t) },
+    { label: "Phase 5: Navigation", test: t => t.startsWith("Ex 18") },
+  ];
+  let html = groups.map(g => `<optgroup label="${g.label}">${ALL_TYPES.filter(g.test).map(t=>`<option>${esc(t)}</option>`).join("")}</optgroup>`).join("");
+  html += `<optgroup label="Tests"><option>General Skills Test (GST)</option><option>Ground Oral Examination</option></optgroup>`;
+  html += `<optgroup label="Ground Exams">${EXAM_TYPES.map(t=>`<option>${esc(t)}</option>`).join("")}</optgroup>`;
+  html += `<optgroup label="Other"><option>Ground School</option><option>Pre-Flight Briefing</option><option>Other</option></optgroup>`;
+  return html;
+}
+
+function renderForm() {
+  const f = formState.data;
+  const isClosure = formState.mode==="closure";
+  const isExam = f.lessonType&&f.lessonType.startsWith("Exam");
+  const overlay = document.getElementById("form-overlay");
+
+  let body = "";
+  if (isClosure) {
+    body = `
+      <div style="margin-bottom:16px"><label class="label">Date *</label><input type="date" id="f-date" value="${f.date||''}"></div>
+      <div style="margin-bottom:16px"><label class="label">Reason</label><input id="f-notes" value="${esc(f.notes||'')}" placeholder="e.g. Christmas Day, Maintenance"></div>
+      <div style="padding:10px 14px;background:#1a0808;border:1px solid #7f1d1d;border-radius:10px;font-size:12px;color:#fca5a5">This will show as a closed day on the calendar.</div>
+    `;
+  } else {
+    const dateWarn = f.date && isWeekendClosed(f.date);
+    const dayNum = f.date ? new Date(f.date+"T00:00:00").getDay() : -1;
+    body = `
+      <div style="margin-bottom:16px"><label class="label">Session Type</label><select id="f-type">${buildTypeOptions()}</select></div>
+      <div class="grid2" style="margin-bottom:16px">
+        <div><label class="label">Date *</label><input type="date" id="f-date" value="${f.date||''}"></div>
+        <div><label class="label">Time *</label><input type="time" id="f-time" value="${f.time||''}"></div>
+      </div>
+      ${dateWarn?`<div style="margin-bottom:14px;padding:8px 12px;background:#422006;border:1px solid #eab30833;border-radius:8px;font-size:12px;color:#fde68a;display:flex;align-items:center;gap:8px">⚠️ ${dayNum===0?'Sunday — airfield used for private hire':'Monday — airfield closed'}</div>`:''}
+      <div style="margin-bottom:16px"><label class="label">Status</label><select id="f-status">${BOOKING_STATUSES.map(s=>`<option value="${s.v}"${f.status===s.v?' selected':''}>${s.l}</option>`).join("")}</select></div>
+      ${!isExam?`
+        <div style="margin-bottom:16px">
+          <label class="label">Instructor</label>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${INSTRUCTORS.map(name=>`<div class="radio-btn ${f.instructor===name?'selected':''}" role="button" onpointerup="setInstructor('${name}')"><div class="radio-circle"><div class="radio-dot"></div></div><span>${name}</span></div>`).join("")}
+            <div class="radio-btn ${f.instructor==='__custom__'?'selected':''}" role="button" onpointerup="setInstructor('__custom__')"><div class="radio-circle"><div class="radio-dot"></div></div><span>Other...</span></div>
+            ${f.instructor==='__custom__'?`<input id="f-custom-inst" value="${esc(f.customInstructor||'')}" placeholder="Type instructor name">`:''}
+            ${f.instructor?`<div role="button" style="padding:10px 0;color:#475569;font-size:13px;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent" onpointerup="setInstructor('')">Clear selection</div>`:''}
+          </div>
+        </div>
+        <div style="margin-bottom:16px"><label class="label">Aircraft / Reg</label><input id="f-aircraft" value="${esc(f.aircraft||'')}" placeholder="e.g. G-CXYZ"></div>
+        <div class="grid2" style="margin-bottom:16px">
+          <div><label class="label">Planned Hrs</label><input type="number" inputmode="decimal" step="0.1" min="0" id="f-duration" value="${f.durationHrs||1.5}"></div>
+          <div><label class="label">Hobbs Logged</label><input type="number" inputmode="decimal" step="0.1" min="0" id="f-hobbs" value="${f.hobbsLogged||''}" placeholder="0.0"><div style="font-size:9px;color:#475569;margin-top:3px">Toward block (not if cancelled)</div></div>
+        </div>
+      `:''}
+      <div style="margin-bottom:16px"><label class="label">Notes</label><textarea id="f-notes" rows="4" placeholder="${isExam?'Revision topics...':'Lesson notes, debrief...'}">${esc(f.notes||'')}</textarea></div>
+    `;
+  }
+
+  if (formState.editing) {
+    body += `<button class="btn44" style="width:100%;padding:0 16px;min-height:48px;background:#450a0a;border:1px solid #ef444433;border-radius:10px;color:#fca5a5;font-size:14px;font-weight:600;margin-top:8px" onpointerup="deleteAndClose()">Delete ${isClosure?'Closure':'Session'}</button>`;
+  }
+
+  overlay.innerHTML = `
+    <div class="form-header">
+      <button class="btn44" style="padding:0 4px;background:transparent;border:none;color:#94a3b8;font-size:15px;font-weight:500" onpointerup="closeForm()">Cancel</button>
+      <h2 style="font-size:16px;font-weight:700;color:${isClosure?'#f87171':'#f1f5f9'}">${isClosure?'🚫 Mark Closed':formState.editing?'Edit Session':'New Session'}</h2>
+      <button class="btn44" style="padding:0 18px;background:#2563eb;border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:700" onpointerup="saveForm()">Save</button>
+    </div>
+    <div class="form-body">${body}</div>
+  `;
+
+  overlay.classList.add("open");
+
+  // Set select values after DOM is built
+  requestAnimationFrame(() => {
+    const typeEl = document.getElementById("f-type");
+    if (typeEl && f.lessonType) typeEl.value = f.lessonType;
+    const statusEl = document.getElementById("f-status");
+    if (statusEl && f.status) statusEl.value = f.status;
+  });
+}
+
+function openNewSession(prefillDate) {
+  formState = { mode: "session", editing: null, data: { ...JSON.parse(JSON.stringify(EMPTY_SESSION)), date: prefillDate||"" } };
+  formState.data.id = null;
+  toggleNewMenu();
+  renderForm();
+}
+function openNewClosure(prefillDate) {
+  formState = { mode: "closure", editing: null, data: { ...JSON.parse(JSON.stringify(EMPTY_CLOSURE)), date: prefillDate||"" } };
+  formState.data.id = null;
+  toggleNewMenu();
+  renderForm();
+}
+function openEdit(id) {
+  const s = state.sessions.find(x=>x.id===id);
+  if (!s) return;
+  formState = { mode: s.status==="closed"?"closure":"session", editing: id, data: JSON.parse(JSON.stringify(s)) };
+  renderForm();
+}
+function closeForm() {
+  document.getElementById("form-overlay").classList.remove("open");
+}
+function setInstructor(v) {
+  formState.data.instructor = v;
+  if (v !== "__custom__") formState.data.customInstructor = "";
+  renderForm();
+}
+
+function readForm() {
+  const f = formState.data;
+  const isClosure = formState.mode === "closure";
+  f.date = document.getElementById("f-date")?.value || "";
+  f.notes = document.getElementById("f-notes")?.value || "";
+
+  if (isClosure) {
+    f.status = "closed"; f.time = "00:00"; f.lessonType = "Airfield Closed"; f.durationHrs = 0; f.hobbsLogged = "";
+  } else {
+    f.time = document.getElementById("f-time")?.value || "";
+    f.lessonType = document.getElementById("f-type")?.value || f.lessonType;
+    f.status = document.getElementById("f-status")?.value || f.status;
+    f.aircraft = document.getElementById("f-aircraft")?.value || "";
+    f.durationHrs = parseFloat(document.getElementById("f-duration")?.value) || 0;
+    f.hobbsLogged = document.getElementById("f-hobbs")?.value || "";
+    if (f.instructor === "__custom__") f.customInstructor = document.getElementById("f-custom-inst")?.value || "";
+  }
+}
+
+function saveForm() {
+  readForm();
+  const f = formState.data;
+  if (!f.date) return;
+  if (formState.mode === "session" && !f.time) return;
+
+  if (formState.editing) {
+    state.sessions = state.sessions.map(s => s.id === formState.editing ? { ...f, id: formState.editing } : s);
+  } else {
+    state.sessions.push({ ...f, id: genId() });
+  }
+  save(); closeForm(); render();
+}
+
+function deleteAndClose() {
+  if (formState.editing) {
+    state.sessions = state.sessions.filter(s => s.id !== formState.editing);
+    save();
+  }
+  closeForm(); render();
+}
+
+// Make functions global
+window.toggleNewMenu = toggleNewMenu;
+window.openNewSession = openNewSession;
+window.openNewClosure = openNewClosure;
+window.openEdit = openEdit;
+window.closeForm = closeForm;
+window.saveForm = saveForm;
+window.deleteAndClose = deleteAndClose;
+window.setInstructor = setInstructor;
+window.setFilter = setFilter;
+window.toggleSort = toggleSort;
+window.deleteSession = deleteSession;
+window.toggleStatus = toggleStatus;
+window.resetBlock = resetBlock;
+window.handleDayClick = handleDayClick;
+
+/* ═══════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════ */
+load();
+if (state.sessions.length === 0) state.sessions = DEFAULT_SESSIONS;
+render();
+</script>
+
+<!-- Form overlay (outside app container) -->
+<div id="form-overlay" class="form-overlay"></div>
+
+</body>
+</html>
