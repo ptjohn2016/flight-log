@@ -561,34 +561,95 @@ function render() {
     const key = dateKey(d);
     const isToday = isSameDay(d,today);
     const wClosed = isWeekendClosed(d);
+    const isSunday = d.getDay()===0;
+    const isMonday = d.getDay()===1;
     const ds = byDate[key]||[];
     const hasClosure = ds.some(s=>s.status==="closed");
     const closed = wClosed||hasClosure;
     const lessons = ds.filter(s=>s.status!=="closed");
     const hasLesson = lessons.length>0;
-    const closedLabel = wClosed ? (d.getDay()===0?"Private hire":"Closed") : (hasClosure ? (ds.find(s=>s.status==="closed")?.notes||"Closed").slice(0,12) : "");
 
-    let bg, border;
-    if (closed) { bg="linear-gradient(135deg,#1a0808,#1f0a0a)"; border="1px solid #7f1d1d"; }
-    else if (isToday) { bg="linear-gradient(135deg,#1e3a5f,#172554)"; border="2px solid #3b82f6"; }
-    else if (hasLesson) { bg="linear-gradient(135deg,#0f172a,#1a1a2e)"; border="1px solid #1e3a5f"; }
-    else { bg="#080d17"; border="1px solid #151d2e"; }
+    // Determine the dominant status for tile colouring
+    const dominantSession = lessons[0];
+    const dominantStatus = dominantSession ? dominantSession.status : null;
 
-    let inner = "";
-    if (closed) {
-      inner = `<div style="font-size:7px;color:#f87171;font-weight:700;line-height:1.2;padding:1px 3px">${esc(closedLabel)}</div>`;
-    } else if (hasLesson) {
-      inner = lessons.slice(0,2).map(s => {
-        const st=getStatus(s.status); const isExam=s.lessonType.startsWith("Exam");
-        return `<div style="font-size:7px;font-weight:700;color:${st.c};background:${st.bg};padding:1px 3px;border-radius:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${isExam?`border:1px dashed ${st.c}44`:''}">${isExam?"📝":"✈"} ${fmtTime(s.time)}</div>`;
-      }).join("");
+    // Stripe pattern for closed/restricted days
+    const stripeCSS = "repeating-linear-gradient(135deg,transparent,transparent 3px,rgba(255,255,255,0.04) 3px,rgba(255,255,255,0.04) 6px)";
+
+    let bg, border, dayColor, numColor, monthColor, labelText="", labelColor="";
+
+    if (closed && isSunday) {
+      // Sunday restricted: dark amber/brown with stripes
+      bg=`${stripeCSS},linear-gradient(135deg,#2a1a00,#1f1400)`;
+      border="1px solid #92400e";
+      dayColor="#fbbf24"; numColor="#fcd34d"; monthColor="#92400e";
+      labelText="Restricted"; labelColor="#fbbf24";
+    } else if (closed) {
+      // Monday closed or manual closure: black with stripes
+      bg=`${stripeCSS},linear-gradient(135deg,#0a0a0a,#111111)`;
+      border="1px solid #374151";
+      dayColor="#6b7280"; numColor="#9ca3af"; monthColor="#4b5563";
+      if (hasClosure) {
+        const note = (ds.find(s=>s.status==="closed")?.notes||"").trim();
+        labelText = note ? note.slice(0,12) : "Closed";
+      } else {
+        labelText = "Closed";
+      }
+      labelColor="#9ca3af";
+    } else if (hasLesson && dominantStatus==="confirmed") {
+      // Confirmed: green tile
+      bg="linear-gradient(135deg,#052e16,#064e3b)";
+      border="1px solid #16a34a";
+      dayColor="#86efac"; numColor="#fff"; monthColor="#22c55e";
+      labelText="Confirmed"; labelColor="#86efac";
+    } else if (hasLesson && dominantStatus==="tentative") {
+      // Tentative: yellow/amber tile
+      bg="linear-gradient(135deg,#1a1500,#2a2000)";
+      border="1px solid #ca8a04";
+      dayColor="#fde68a"; numColor="#fef3c7"; monthColor="#a16207";
+      labelText="Tentative"; labelColor="#fde68a";
+    } else if (hasLesson && dominantStatus==="completed") {
+      // Completed: blue tile
+      bg="linear-gradient(135deg,#0c1929,#172554)";
+      border="1px solid #2563eb";
+      dayColor="#93c5fd"; numColor="#dbeafe"; monthColor="#1d4ed8";
+      labelText="Completed"; labelColor="#93c5fd";
+    } else if (hasLesson && dominantStatus==="cancelled") {
+      // Cancelled: muted red tile
+      bg="linear-gradient(135deg,#1a0808,#1f0a0a)";
+      border="1px solid #7f1d1d";
+      dayColor="#fca5a5"; numColor="#fca5a5"; monthColor="#991b1b";
+      labelText="Cancelled"; labelColor="#fca5a5";
+    } else if (isToday) {
+      bg="linear-gradient(135deg,#1e3a5f,#172554)";
+      border="2px solid #3b82f6";
+      dayColor="#93c5fd"; numColor="#fff"; monthColor="#60a5fa";
+    } else {
+      bg="#080d17";
+      border="1px solid #151d2e";
+      dayColor="#64748b"; numColor="#cbd5e1"; monthColor="#475569";
     }
 
-    return `<div class="cal-day" style="background:${bg};border:${border};cursor:${wClosed?'default':'pointer'}" 
-      ${wClosed?'':`onclick="handleDayClick('${key}')"`}>
-      <div style="font-size:9px;color:${closed?'#f87171':isToday?'#93c5fd':'#64748b'};font-weight:700;text-transform:uppercase">${DN[d.getDay()]}</div>
-      <div style="font-size:18px;font-weight:800;color:${closed?'#fca5a5':isToday?'#fff':'#cbd5e1'};font-family:var(--mono);line-height:1.3">${d.getDate()}</div>
-      <div style="font-size:8px;color:${closed?'#991b1b':'#475569'};margin-bottom:3px">${MN[d.getMonth()]}</div>
+    // Inner content: show status label or time
+    let inner = "";
+    if (closed) {
+      inner = `<div style="font-size:7px;font-weight:700;color:${labelColor};line-height:1.2;padding:1px 3px;white-space:nowrap">${esc(labelText)}</div>`;
+    } else if (hasLesson) {
+      // Show time + status label
+      const timeStr = fmtTime(dominantSession.time);
+      if (timeStr) {
+        inner += `<div style="font-size:7px;font-weight:700;color:${labelColor};padding:1px 3px;white-space:nowrap">✈ ${timeStr}</div>`;
+      }
+      if (lessons.length > 1) {
+        inner += `<div style="font-size:6px;font-weight:600;color:${monthColor};padding:0 3px">+${lessons.length-1} more</div>`;
+      }
+    }
+
+    return `<div class="cal-day" style="background:${bg};border:${border};cursor:${wClosed&&!hasLesson?'default':'pointer'}" 
+      ${wClosed&&!hasLesson?'':`onclick="handleDayClick('${key}')"`}>
+      <div style="font-size:9px;color:${dayColor};font-weight:700;text-transform:uppercase">${DN[d.getDay()]}</div>
+      <div style="font-size:18px;font-weight:800;color:${numColor};font-family:var(--mono);line-height:1.3">${d.getDate()}</div>
+      <div style="font-size:8px;color:${monthColor};margin-bottom:3px">${MN[d.getMonth()]}</div>
       <div style="display:flex;flex-direction:column;gap:2px;align-items:center">${inner}</div>
       ${isToday?'<div style="position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:#3b82f6;box-shadow:0 0 6px #3b82f6"></div>':''}
     </div>`;
@@ -682,10 +743,11 @@ function render() {
       </div>
       <div class="cal-strip">${calHTML}</div>
       <div style="display:flex;gap:10px;padding-left:14px;padding-top:4px;flex-wrap:wrap">
-        <span style="font-size:9px;color:#475569">✈ Flight</span>
-        <span style="font-size:9px;color:#475569">📝 Exam</span>
-        <span style="font-size:9px;color:#3b82f6">■ Today</span>
-        <span style="font-size:9px;color:#f87171">■ Unavailable</span>
+        <span style="font-size:9px;color:#22c55e">● Confirmed</span>
+        <span style="font-size:9px;color:#eab308">● Tentative</span>
+        <span style="font-size:9px;color:#3b82f6">● Today</span>
+        <span style="font-size:9px;color:#fbbf24">● Restricted</span>
+        <span style="font-size:9px;color:#6b7280">● Closed</span>
       </div>
     </div>
 
@@ -832,7 +894,7 @@ function renderForm() {
         <div><label class="label">Date *</label><input type="date" id="f-date" value="${f.date||''}"></div>
         <div><label class="label">Time *</label><input type="time" id="f-time" value="${f.time||''}"></div>
       </div>
-      ${dateWarn?`<div style="margin-bottom:14px;padding:8px 12px;background:#422006;border:1px solid #eab30833;border-radius:8px;font-size:12px;color:#fde68a;display:flex;align-items:center;gap:8px">⚠️ ${dayNum===0?'Sunday — airfield used for private hire':'Monday — airfield closed'}</div>`:''}
+      ${dateWarn?`<div style="margin-bottom:14px;padding:8px 12px;background:#422006;border:1px solid #eab30833;border-radius:8px;font-size:12px;color:#fde68a;display:flex;align-items:center;gap:8px">⚠️ ${dayNum===0?'Sunday — airfield restricted':'Monday — airfield closed'}</div>`:''}
       <div style="margin-bottom:16px"><label class="label">Status</label><select id="f-status">${BOOKING_STATUSES.map(s=>`<option value="${s.v}"${f.status===s.v?' selected':''}>${s.l}</option>`).join("")}</select></div>
       ${!isExam?`
         <div style="margin-bottom:16px">
