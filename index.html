@@ -54,6 +54,10 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 
 /* iPad-responsive: session list stays single column but wider cards */
 .sessions-grid { display: flex; flex-direction: column; gap: 8px; }
+@media (min-width: 768px) {
+  .sessions-grid { gap: 10px; }
+  .sessions-grid > .session-card { padding: 18px 20px; border-radius: 16px; }
+}
 
 /* Badge */
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
@@ -192,7 +196,7 @@ const LESSON_TYPES = [
   "Ex 18a – Dual Navigation","Ex 18b – Dual Nav (Min Level & Lost Proc)",
   "Ex 18c – Solo Nav (1st Qualifying XC)","Ex 18d – Solo Nav (2nd Qualifying XC)",
   "General Skills Test (GST)","Ground Oral Examination",
-  "Ground School","Pre-Flight Briefing","Other",
+  "Ground School","Pre-Flight Briefing","Refresher – Return to Flying","Other",
 ];
 const EXAM_TYPES = ["Exam – Aviation Law","Exam – Meteorology","Exam – Navigation","Exam – Human Performance & Limitations","Exam – Aircraft Technical"];
 const ALL_TYPES = [...LESSON_TYPES, ...EXAM_TYPES];
@@ -816,7 +820,7 @@ function buildTypeOptions() {
   let html = groups.map(g => `<optgroup label="${g.label}">${ALL_TYPES.filter(g.test).map(t=>`<option>${esc(t)}</option>`).join("")}</optgroup>`).join("");
   html += `<optgroup label="Tests"><option>General Skills Test (GST)</option><option>Ground Oral Examination</option></optgroup>`;
   html += `<optgroup label="Ground Exams">${EXAM_TYPES.map(t=>`<option>${esc(t)}</option>`).join("")}</optgroup>`;
-  html += `<optgroup label="Other"><option>Ground School</option><option>Pre-Flight Briefing</option><option>Other</option></optgroup>`;
+  html += `<optgroup label="Other"><option>Ground School</option><option>Pre-Flight Briefing</option><option>Refresher – Return to Flying</option><option>Other</option></optgroup>`;
   return html;
 }
 
