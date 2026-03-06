@@ -24,7 +24,10 @@
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { 
-  overflow-x: hidden; width: 100%; background: var(--bg); color: var(--text); background-image: url(data:image/jpeg;base64,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); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+  overflow-x: hidden; width: 100%; background: var(--bg); color: var(--text);
+  /* Background: commit bg.png to your GitHub Pages repo root alongside index.html */
+  background-image: url("bg.png");
+  background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
   font-family: var(--font); -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
 }
@@ -529,12 +532,8 @@ function addToCalendarFromForm() {
    ═══════════════════════════════════════════ */
 function render() {
   const today = new Date(); today.setHours(0,0,0,0);
-  const used = hoursUsed();
-  const total = 10;
-  const rem = Math.max(total-used,0);
-  const pct = Math.min((used/total)*100,100);
-  const low = rem<=2&&rem>0;
-  const done = rem<=0&&used>0;
+  const totalHours = hoursUsed();
+  const totalSessions = state.sessions.filter(s=>s.status!=="cancelled"&&s.status!=="closed").length;
 
   const upcoming = state.sessions.filter(s=>(s.status==="confirmed"||s.status==="tentative")&&new Date(s.date)>=today).length;
   const completed = state.sessions.filter(s=>s.status==="completed").length;
@@ -680,22 +679,23 @@ function render() {
       const inst = getInstructor(s);
       const isExam = s.lessonType.startsWith("Exam");
       
-      // Status-based card colours
+      // Status-based card colours with diagonal texture
+      const cardTexture = "repeating-linear-gradient(135deg,transparent,transparent 4px,rgba(255,255,255,0.02) 4px,rgba(255,255,255,0.02) 8px),";
       let cardBg, cardBorder, dateColor, titleColor, metaColor, accentColor, btnBg, btnBorder;
       if (s.status==="confirmed") {
-        cardBg="linear-gradient(135deg,#1a2e1a,#1e3320,#1a2e1a)"; cardBorder="#2d5a2d";
+        cardBg=cardTexture+"linear-gradient(135deg,#1a2e1a,#1e3320,#1a2e1a)"; cardBorder="#2d5a2d";
         dateColor="#a3c9a3"; titleColor="#d4ecd4"; metaColor="#7ab07a"; accentColor="#86efac";
         btnBg="rgba(0,0,0,0.3)"; btnBorder="rgba(134,239,172,0.15)";
       } else if (s.status==="tentative") {
-        cardBg="linear-gradient(135deg,#3d3520,#4a3f24,#3d3520)"; cardBorder="#8b7535";
+        cardBg=cardTexture+"linear-gradient(135deg,#3d3520,#4a3f24,#3d3520)"; cardBorder="#8b7535";
         dateColor="#d4c48a"; titleColor="#f5ecd0"; metaColor="#b8a86e"; accentColor="#fef08a";
         btnBg="rgba(0,0,0,0.25)"; btnBorder="rgba(254,240,138,0.15)";
       } else if (s.status==="completed") {
-        cardBg="linear-gradient(135deg,#0f1a2e,#152040,#0f1a2e)"; cardBorder="#2a4a8a";
+        cardBg=cardTexture+"linear-gradient(135deg,#0f1a2e,#152040,#0f1a2e)"; cardBorder="#2a4a8a";
         dateColor="#93b4e0"; titleColor="#c8ddf5"; metaColor="#6e95c8"; accentColor="#93c5fd";
         btnBg="rgba(0,0,0,0.3)"; btnBorder="rgba(147,197,253,0.15)";
       } else if (s.status==="cancelled") {
-        cardBg="linear-gradient(135deg,#1e1215,#251519,#1e1215)"; cardBorder="#5a2a2a";
+        cardBg=cardTexture+"linear-gradient(135deg,#1e1215,#251519,#1e1215)"; cardBorder="#5a2a2a";
         dateColor="#d4a0a0"; titleColor="#f0c8c8"; metaColor="#b07a7a"; accentColor="#fca5a5";
         btnBg="rgba(0,0,0,0.3)"; btnBorder="rgba(252,165,165,0.15)";
       } else {
@@ -729,10 +729,6 @@ function render() {
       </div>`;
     }).join("");
   }
-
-  // Gauge color
-  const gaugeCol = done?"linear-gradient(90deg,#ef4444,#dc2626)":low?"linear-gradient(90deg,#eab308,#f59e0b)":"linear-gradient(90deg,#2563eb,#3b82f6)";
-  const remCol = done?"#ef4444":low?"#eab308":"#22c55e";
 
   document.getElementById("app").innerHTML = `
     <div class="shell">
@@ -779,25 +775,17 @@ function render() {
     <div class="ipad-layout">
     <div class="ipad-sidebar">
 
-    <!-- Hour Block -->
+    <!-- Total Hours -->
     <div class="card" style="margin-bottom:12px;padding:16px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px">
         <div>
-          <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin-bottom:2px">Hour Block</div>
-          <div style="font-size:26px;font-weight:800;color:#e2e8f0;font-family:var(--mono);line-height:1">${used.toFixed(1)}<span style="font-size:14px;color:#475569;font-weight:400"> / ${total} hrs</span></div>
+          <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin-bottom:2px">Total Hours Logged</div>
+          <div style="font-size:30px;font-weight:800;color:#e2e8f0;font-family:var(--mono);line-height:1">${totalHours.toFixed(1)}<span style="font-size:14px;color:#475569;font-weight:400"> hrs</span></div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:${remCol}">${rem.toFixed(1)}</div>
-          <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px">left</div>
+          <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:#3b82f6">${totalSessions}</div>
+          <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px">sessions</div>
         </div>
-      </div>
-      <div style="width:100%;height:8px;background:#1e293b;border-radius:8px;overflow:hidden">
-        <div style="width:${pct}%;height:100%;border-radius:8px;transition:width 0.5s;background:${gaugeCol}"></div>
-      </div>
-      ${done?'<div style="margin-top:8px;padding:6px 10px;background:#450a0a;border:1px solid #ef444433;border-radius:8px;font-size:11px;color:#fca5a5;text-align:center">Block used — reset for new block</div>':''}
-      ${low&&!done?`<div style="margin-top:8px;padding:6px 10px;background:#422006;border:1px solid #eab30833;border-radius:8px;font-size:11px;color:#fde68a;text-align:center">${rem.toFixed(1)} hrs remaining</div>`:''}
-      <div style="display:flex;justify-content:flex-end;margin-top:8px">
-        <button class="btn44" id="reset-btn" style="padding:0 16px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:600" onclick="resetBlock()">New Block (Reset)</button>
       </div>
     </div>
 
