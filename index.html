@@ -45,19 +45,15 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 .label { display: block; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600; }
 .container { max-width: 600px; margin: 0 auto; padding: 16px 12px 80px; overflow-x: hidden; }
 @media (min-width: 768px) {
-  .container { max-width: 860px; padding: 24px 24px 80px; }
+  .container { max-width: 980px; padding: 24px 24px 80px; }
 }
 .card { background: linear-gradient(135deg, var(--surface), var(--surface2)); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
 .btn44 { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 
-/* iPad-responsive: 2-col session list */
+/* iPad-responsive: session list stays single column but wider cards */
 .sessions-grid { display: flex; flex-direction: column; gap: 8px; }
-@media (min-width: 768px) {
-  .sessions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .sessions-grid > .session-card { min-height: 0; }
-}
 
 /* Badge */
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
@@ -116,13 +112,21 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .fade-in { animation: fadeIn 0.3s ease; }
 
-/* Dashboard row: stacked on phone, side-by-side on iPad */
+/* Dashboard row: stacked on phone */
 .dashboard-row { display: flex; flex-direction: column; }
 .stats-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
 @media (min-width: 768px) {
-  .dashboard-row { flex-direction: row; gap: 12px; margin-bottom: 14px; align-items: stretch; }
-  .dashboard-row > .card { margin-bottom: 0; }
-  .stats-col { grid-template-columns: 1fr; gap: 8px; margin-bottom: 0; width: 160px; flex-shrink: 0; }
+  .stats-col { grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 0; }
+}
+
+/* iPad two-panel layout */
+.ipad-layout { display: flex; flex-direction: column; }
+.ipad-sidebar { }
+.ipad-main { }
+@media (min-width: 768px) {
+  .ipad-layout { flex-direction: row; gap: 20px; align-items: flex-start; }
+  .ipad-sidebar { width: 320px; flex-shrink: 0; position: sticky; top: 24px; }
+  .ipad-main { flex: 1; min-width: 0; }
 }
 
 /* Closed day */
@@ -143,7 +147,7 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 }
 @media (min-width: 768px){
   .shell{
-    max-width: 860px;
+    max-width: 980px;
     padding:24px;
     padding-top: calc(24px + env(safe-area-inset-top));
     padding-right: calc(24px + env(safe-area-inset-right));
@@ -681,10 +685,25 @@ function render() {
       </div>
     </div>
 
-    <!-- Dashboard row: Hour Block + Stats -->
-    <div class="dashboard-row">
+    <!-- Calendar -->
+    <div class="card" style="padding:14px 0 10px;margin-bottom:12px">
+      <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;margin-bottom:10px;padding-left:14px;display:flex;align-items:center;gap:6px">
+        <span style="font-size:14px">📅</span> Next 3 Months
+      </div>
+      <div class="cal-strip">${calHTML}</div>
+      <div style="display:flex;gap:10px;padding-left:14px;padding-top:4px;flex-wrap:wrap">
+        <span style="font-size:9px;color:#475569">✈ Flight</span>
+        <span style="font-size:9px;color:#475569">📝 Exam</span>
+        <span style="font-size:9px;color:#3b82f6">■ Today</span>
+        <span style="font-size:9px;color:#f87171">■ Unavailable</span>
+      </div>
+    </div>
+
+    <div class="ipad-layout">
+    <div class="ipad-sidebar">
+
     <!-- Hour Block -->
-    <div class="card" style="margin-bottom:12px;padding:16px;flex:1;min-width:0">
+    <div class="card" style="margin-bottom:12px;padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px">
         <div>
           <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin-bottom:2px">Hour Block</div>
@@ -720,7 +739,9 @@ function render() {
         <div style="font-size:20px;font-weight:700;color:#e2e8f0;font-family:var(--mono)">${cancelled}</div>
       </div>
     </div>
-    </div>
+
+    </div><!-- end ipad-sidebar -->
+    <div class="ipad-main">
 
     <!-- Filters -->
     <div class="filters">
@@ -735,6 +756,9 @@ function render() {
 
     <!-- Sessions -->
     <div class="sessions-grid">${listHTML}</div>
+
+    </div><!-- end ipad-main -->
+    </div><!-- end ipad-layout -->
   `;
 }
 
