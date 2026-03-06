@@ -44,10 +44,20 @@ textarea { resize: vertical; min-height: 88px; }
 button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cursor: pointer; }
 .label { display: block; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600; }
 .container { max-width: 600px; margin: 0 auto; padding: 16px 12px 80px; overflow-x: hidden; }
+@media (min-width: 768px) {
+  .container { max-width: 860px; padding: 24px 24px 80px; }
+}
 .card { background: linear-gradient(135deg, var(--surface), var(--surface2)); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
 .btn44 { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+/* iPad-responsive: 2-col session list */
+.sessions-grid { display: flex; flex-direction: column; gap: 8px; }
+@media (min-width: 768px) {
+  .sessions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .sessions-grid > .session-card { min-height: 0; }
+}
 
 /* Badge */
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
@@ -56,6 +66,9 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 /* Calendar */
 .cal-strip { display: flex; gap: 6px; overflow-x: auto; padding: 0 14px 8px; -webkit-overflow-scrolling: touch; }
 .cal-day { flex-shrink: 0; width: 64px; border-radius: 12px; padding: 8px 2px 6px; text-align: center; min-height: 82px; position: relative; -webkit-tap-highlight-color: transparent; }
+@media (min-width: 768px) {
+  .cal-day { width: 80px; min-height: 92px; padding: 10px 4px 8px; }
+}
 
 /* Session card */
 .session-card { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color 0.2s; }
@@ -68,8 +81,19 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 /* Form overlay */
 .form-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: none; flex-direction: column; width: 100%; max-width: 100vw; overflow-x: hidden; }
 .form-overlay.open { display: flex; }
+.form-panel { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+@media (min-width: 768px) {
+  .form-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+  .form-panel { max-width: 560px; width: 100%; max-height: 80vh; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 24px 80px rgba(0,0,0,0.6); flex: none; }
+  .form-panel .form-header { background: var(--surface); }
+  .form-panel .form-body { background: var(--bg); }
+}
 .form-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); padding-top: max(12px, env(safe-area-inset-top)); background: var(--bg); flex-shrink: 0; }
 .form-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px; -webkit-overflow-scrolling: touch; padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+@media (min-width: 768px) {
+  .form-header { padding-top: 12px; }
+  .form-body { padding-bottom: 32px; }
+}
 
 /* New menu */
 .new-menu { position: absolute; top: 100%; right: 0; margin-top: 6px; z-index: 100; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); overflow: hidden; min-width: 200px; }
@@ -78,6 +102,10 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 
 /* Radio buttons */
 .radio-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px; background: #0f172a; border: 1px solid var(--border); border-radius: 10px; color: var(--text2); font-size: 16px; min-height: 52px; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; text-align: left; font-family: var(--font); }
+@media (min-width: 768px) {
+  .radio-btn { padding: 12px 14px; min-height: 48px; font-size: 15px; }
+  .radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+}
 .radio-btn.selected { background: #172554; border: 2px solid var(--blue2); color: #93c5fd; font-weight: 600; }
 .radio-circle { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #334155; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .radio-btn.selected .radio-circle { border-color: var(--blue2); background: var(--blue2); }
@@ -87,6 +115,15 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 /* Animations */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .fade-in { animation: fadeIn 0.3s ease; }
+
+/* Dashboard row: stacked on phone, side-by-side on iPad */
+.dashboard-row { display: flex; flex-direction: column; }
+.stats-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+@media (min-width: 768px) {
+  .dashboard-row { flex-direction: row; gap: 12px; margin-bottom: 14px; align-items: stretch; }
+  .dashboard-row > .card { margin-bottom: 0; }
+  .stats-col { grid-template-columns: 1fr; gap: 8px; margin-bottom: 0; width: 160px; flex-shrink: 0; }
+}
 
 /* Closed day */
 .cal-closed { background: linear-gradient(135deg, #1a0808, #1f0a0a) !important; border-color: #7f1d1d !important; }
@@ -106,7 +143,7 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 }
 @media (min-width: 768px){
   .shell{
-    max-width: 1000px;
+    max-width: 860px;
     padding:24px;
     padding-top: calc(24px + env(safe-area-inset-top));
     padding-right: calc(24px + env(safe-area-inset-right));
@@ -155,7 +192,7 @@ const LESSON_TYPES = [
 ];
 const EXAM_TYPES = ["Exam – Aviation Law","Exam – Meteorology","Exam – Navigation","Exam – Human Performance & Limitations","Exam – Aircraft Technical"];
 const ALL_TYPES = [...LESSON_TYPES, ...EXAM_TYPES];
-const INSTRUCTORS = ["Paul Haskins", "Mark Peters", "Paul Bennett"];
+const INSTRUCTORS = ["Paul Haskins", "Mark Peters", "Paul Bennet"];
 const STATUSES = [
   { v: "confirmed", l: "Confirmed", c: "#22c55e", bg: "#052e16" },
   { v: "tentative", l: "Tentative", c: "#eab308", bg: "#422006" },
@@ -644,8 +681,10 @@ function render() {
       </div>
     </div>
 
+    <!-- Dashboard row: Hour Block + Stats -->
+    <div class="dashboard-row">
     <!-- Hour Block -->
-    <div class="card" style="margin-bottom:12px;padding:16px">
+    <div class="card" style="margin-bottom:12px;padding:16px;flex:1;min-width:0">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px">
         <div>
           <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin-bottom:2px">Hour Block</div>
@@ -667,7 +706,7 @@ function render() {
     </div>
 
     <!-- Stats -->
-    <div class="grid3" style="margin-bottom:14px">
+    <div class="stats-col">
       <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;text-align:center">
         <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:2px">📅 Upcoming</div>
         <div style="font-size:20px;font-weight:700;color:#e2e8f0;font-family:var(--mono)">${upcoming}</div>
@@ -680,6 +719,7 @@ function render() {
         <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:2px">✕ Cancelled</div>
         <div style="font-size:20px;font-weight:700;color:#e2e8f0;font-family:var(--mono)">${cancelled}</div>
       </div>
+    </div>
     </div>
 
     <!-- Filters -->
@@ -694,7 +734,7 @@ function render() {
     </div>
 
     <!-- Sessions -->
-    <div style="display:flex;flex-direction:column;gap:8px">${listHTML}</div>
+    <div class="sessions-grid">${listHTML}</div>
   `;
 }
 
@@ -784,8 +824,10 @@ function renderForm() {
         <div style="margin-bottom:16px">
           <label class="label">Instructor</label>
           <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="radio-grid" style="display:flex;flex-direction:column;gap:8px">
             ${INSTRUCTORS.map(name=>`<div class="radio-btn ${f.instructor===name?'selected':''}" role="button" onclick="setInstructor('${name}')"><div class="radio-circle"><div class="radio-dot"></div></div><span>${name}</span></div>`).join("")}
             <div class="radio-btn ${f.instructor==='__custom__'?'selected':''}" role="button" onclick="setInstructor('__custom__')"><div class="radio-circle"><div class="radio-dot"></div></div><span>Other...</span></div>
+            </div>
             ${f.instructor==='__custom__'?`<input id="f-custom-inst" value="${esc(f.customInstructor||'')}" placeholder="Type instructor name">`:''}
             ${f.instructor?`<div role="button" style="padding:10px 0;color:#475569;font-size:13px;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="setInstructor('')">Clear selection</div>`:''}
           </div>
@@ -811,12 +853,14 @@ function renderForm() {
   }
 
   overlay.innerHTML = `
+    <div class="form-panel">
     <div class="form-header">
       <button class="btn44" style="padding:0 4px;background:transparent;border:none;color:#94a3b8;font-size:15px;font-weight:500" onclick="closeForm()">Cancel</button>
       <h2 style="font-size:16px;font-weight:700;color:${isClosure?'#f87171':'#f1f5f9'}">${isClosure?'🚫 Mark Closed':formState.editing?'Edit Session':'New Session'}</h2>
       <button class="btn44" style="padding:0 18px;background:#2563eb;border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:700" onclick="saveForm()">Save</button>
     </div>
     <div class="form-body">${body}</div>
+    </div>
   `;
 
   overlay.classList.add("open");
@@ -851,6 +895,10 @@ function openEdit(id) {
 function closeForm() {
   document.getElementById("form-overlay").classList.remove("open");
 }
+// Close form when clicking backdrop (iPad modal)
+document.getElementById("form-overlay").addEventListener("click", function(e) {
+  if (e.target === this) closeForm();
+});
 function setInstructor(v) {
   readForm(); // preserve date, time, and other fields before re-render
   formState.data.instructor = v;
@@ -982,4 +1030,3 @@ window.addEventListener("unhandledrejection", (e) => showBootError(e.reason));
 
 </body>
 </html>
-
