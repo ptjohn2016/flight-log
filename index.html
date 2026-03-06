@@ -895,10 +895,6 @@ function openEdit(id) {
 function closeForm() {
   document.getElementById("form-overlay").classList.remove("open");
 }
-// Close form when clicking backdrop (iPad modal)
-document.getElementById("form-overlay").addEventListener("click", function(e) {
-  if (e.target === this) closeForm();
-});
 function setInstructor(v) {
   readForm(); // preserve date, time, and other fields before re-render
   formState.data.instructor = v;
@@ -1027,7 +1023,12 @@ window.addEventListener("unhandledrejection", (e) => showBootError(e.reason));
 
 <!-- Form overlay (outside app container) -->
 <div id="form-overlay" class="form-overlay"></div>
+<script>
+// Close form when clicking backdrop (iPad modal)
+document.getElementById("form-overlay").addEventListener("click", function(e) {
+  if (e.target === this) closeForm();
+});
+</script>
 
 </body>
 </html>
-
