@@ -579,11 +579,11 @@ function render() {
     let bg, border, dayColor, numColor, monthColor, labelText="", labelColor="";
 
     if (closed && isSunday) {
-      // Sunday restricted: dark amber/brown with stripes
-      bg=`${stripeCSS},linear-gradient(135deg,#2a1a00,#1f1400)`;
-      border="1px solid #92400e";
-      dayColor="#fbbf24"; numColor="#fcd34d"; monthColor="#92400e";
-      labelText="Restricted"; labelColor="#fbbf24";
+      // Sunday restricted: pumpkin orange with stripes
+      bg=`${stripeCSS},linear-gradient(135deg,#1a0e00,#2a1500)`;
+      border="1px solid #c2410c";
+      dayColor="#fb923c"; numColor="#fdba74"; monthColor="#9a3412";
+      labelText="Restricted"; labelColor="#fb923c";
     } else if (closed) {
       // Monday closed or manual closure: black with stripes
       bg=`${stripeCSS},linear-gradient(135deg,#0a0a0a,#111111)`;
@@ -603,11 +603,11 @@ function render() {
       dayColor="#86efac"; numColor="#fff"; monthColor="#22c55e";
       labelText="Confirmed"; labelColor="#86efac";
     } else if (hasLesson && dominantStatus==="tentative") {
-      // Tentative: yellow/amber tile
-      bg="linear-gradient(135deg,#1a1500,#2a2000)";
-      border="1px solid #ca8a04";
-      dayColor="#fde68a"; numColor="#fef3c7"; monthColor="#a16207";
-      labelText="Tentative"; labelColor="#fde68a";
+      // Tentative: amber background with light yellow text
+      bg="linear-gradient(135deg,#1c1a00,#2a2600)";
+      border="1px solid #eab308";
+      dayColor="#fef9c3"; numColor="#fefce8"; monthColor="#ca8a04";
+      labelText="Tentative"; labelColor="#fef08a";
     } else if (hasLesson && dominantStatus==="completed") {
       // Completed: blue tile
       bg="linear-gradient(135deg,#0c1929,#172554)";
@@ -720,12 +720,12 @@ function render() {
 <button onclick="signOut()" style="background:#1e293b; border:none; color:#94a3b8; font-size:10px; font-weight:700; cursor:pointer; margin-left:8px; padding:4px 8px; border-radius:6px; font-family:var(--font);">SIGN OUT</button>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
-          <p style="font-size:11px;color:#475569">NPPL (Microlight) Training</p>
+          <p style="font-size:11px;color:#475569">NPPL (Microlight) · Flylight Dragonfly · G-FLYB</p>
           <span id="save-indicator" style="font-size:9px"></span>
         </div>
       </div>
       <div style="position:relative" id="new-btn-wrap">
-        <button class="btn44" style="padding:0 20px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 4px 16px #2563eb33" onclick="toggleNewMenu()">+ New</button>
+        <button class="btn44" style="padding:0 20px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 4px 16px #2563eb33" onclick="toggleNewMenu()">+ Log Flight</button>
         <div id="new-menu" style="display:none">
           <div class="new-menu-backdrop" onclick="toggleNewMenu()"></div>
           <div class="new-menu">
@@ -746,7 +746,7 @@ function render() {
         <span style="font-size:9px;color:#22c55e">● Confirmed</span>
         <span style="font-size:9px;color:#eab308">● Tentative</span>
         <span style="font-size:9px;color:#3b82f6">● Today</span>
-        <span style="font-size:9px;color:#fbbf24">● Restricted</span>
+        <span style="font-size:9px;color:#fb923c">● Restricted</span>
         <span style="font-size:9px;color:#6b7280">● Closed</span>
       </div>
     </div>
@@ -800,8 +800,7 @@ function render() {
       ${["all","confirmed","tentative","cancelled","completed","closed"].map(f => {
         const active = state.filter===f;
         const st = STATUSES.find(s=>s.v===f);
-        return `<button class="filter-btn ${active?'active':''}" style="${active&&st?`border-color:${st.c};background:${st.bg};color:${st.c}`:''}" onclick="setFilter('${f}')">${f==="all"?"All":st?st.l:f}</button>
-    </div>`;
+        return `<button class="filter-btn ${active?'active':''}" style="${active&&st?`border-color:${st.c};background:${st.bg};color:${st.c}`:''}" onclick="setFilter('${f}')">${f==="all"?"All":st?st.l:f}</button>`;
       }).join("")}
       <button class="filter-btn" style="padding:0 12px;border-radius:8px" onclick="toggleSort()">${state.sortAsc?"↑ Old":"↓ New"}</button>
     </div>
