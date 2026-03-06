@@ -24,7 +24,7 @@
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { 
-  overflow-x: hidden; width: 100%; background: var(--bg); color: var(--text);
+  overflow-x: hidden; width: 100%; background: var(--bg); color: var(--text); background-image: url(data:image/jpeg;base64,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); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
   font-family: var(--font); -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
 }
@@ -47,7 +47,7 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 @media (min-width: 768px) {
   .container { max-width: 980px; padding: 24px 24px 80px; }
 }
-.card { background: linear-gradient(135deg, var(--surface), var(--surface2)); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+.card { background: linear-gradient(135deg, var(--surface), var(--surface2)); border: 1px solid var(--border); border-radius: 14px; padding: 14px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .btn44 { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
@@ -672,33 +672,58 @@ function render() {
               <div style="font-size:14px;font-weight:700;color:#f87171">🚫 Airfield Closed</div>
               ${s.notes?`<div style="margin-top:4px;font-size:11px;color:#991b1b;font-style:italic">${esc(s.notes)}</div>`:''}
             </div>
-            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#ef4444;font-size:13px;padding:0" onclick="event.stopPropagation();deleteSession('${s.id}')">✕</button>
+            <button class="btn44" style="width:40px;height:40px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#ef4444;font-size:13px;padding:0" onclick="event.stopPropagation();deleteSession('${s.id}')">✕</button>
           </div>
         </div>`;
       }
       const canc = s.status==="cancelled";
       const inst = getInstructor(s);
       const isExam = s.lessonType.startsWith("Exam");
-      return `<div class="card session-card" style="${isExam?'background:linear-gradient(135deg,#0f1520,#151a2e);border-color:#2d2b55':''}${canc?';opacity:0.5':''}" onclick="openEdit('${s.id}')">
+      
+      // Status-based card colours
+      let cardBg, cardBorder, dateColor, titleColor, metaColor, accentColor, btnBg, btnBorder;
+      if (s.status==="confirmed") {
+        cardBg="linear-gradient(135deg,#1a2e1a,#1e3320,#1a2e1a)"; cardBorder="#2d5a2d";
+        dateColor="#a3c9a3"; titleColor="#d4ecd4"; metaColor="#7ab07a"; accentColor="#86efac";
+        btnBg="rgba(0,0,0,0.3)"; btnBorder="rgba(134,239,172,0.15)";
+      } else if (s.status==="tentative") {
+        cardBg="linear-gradient(135deg,#3d3520,#4a3f24,#3d3520)"; cardBorder="#8b7535";
+        dateColor="#d4c48a"; titleColor="#f5ecd0"; metaColor="#b8a86e"; accentColor="#fef08a";
+        btnBg="rgba(0,0,0,0.25)"; btnBorder="rgba(254,240,138,0.15)";
+      } else if (s.status==="completed") {
+        cardBg="linear-gradient(135deg,#0f1a2e,#152040,#0f1a2e)"; cardBorder="#2a4a8a";
+        dateColor="#93b4e0"; titleColor="#c8ddf5"; metaColor="#6e95c8"; accentColor="#93c5fd";
+        btnBg="rgba(0,0,0,0.3)"; btnBorder="rgba(147,197,253,0.15)";
+      } else if (s.status==="cancelled") {
+        cardBg="linear-gradient(135deg,#1e1215,#251519,#1e1215)"; cardBorder="#5a2a2a";
+        dateColor="#d4a0a0"; titleColor="#f0c8c8"; metaColor="#b07a7a"; accentColor="#fca5a5";
+        btnBg="rgba(0,0,0,0.3)"; btnBorder="rgba(252,165,165,0.15)";
+      } else {
+        cardBg="linear-gradient(135deg,var(--surface),var(--surface2))"; cardBorder="var(--border)";
+        dateColor="#cbd5e1"; titleColor="#f1f5f9"; metaColor="#64748b"; accentColor="#94a3b8";
+        btnBg="#1e293b"; btnBorder="#334155";
+      }
+
+      return `<div class="card session-card" style="background:${cardBg};border-color:${cardBorder}${canc?';opacity:0.5':''}" onclick="openEdit('${s.id}')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
-              <span style="font-family:var(--mono);font-size:12px;font-weight:600;color:#cbd5e1">${fmtDate(s.date)} · ${fmtTime(s.time)}</span>
+              <span style="font-family:var(--mono);font-size:12px;font-weight:600;color:${dateColor}">${fmtDate(s.date)} · ${fmtTime(s.time)}</span>
               ${badge(s.status,true)}
             </div>
-            <div style="font-size:15px;font-weight:700;color:${isExam?'#c4b5fd':'#f1f5f9'};margin-bottom:4px;${canc?'text-decoration:line-through':''}">${isExam?'📝 ':''}${esc(s.lessonType)}</div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:#64748b">
+            <div style="font-size:14px;font-weight:700;color:${titleColor};margin-bottom:4px;${canc?'text-decoration:line-through':''}">${s.aircraft?`<span style="font-family:var(--mono)">${esc(s.aircraft)}</span> · `:''}${isExam?'📝 ':''}${esc(s.lessonType)}${!isExam?' · Dual '+s.durationHrs+'h':''}</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:${metaColor}">
               ${inst?`<span>👤 ${esc(inst)}</span>`:''}
-              ${s.aircraft?`<span style="font-family:var(--mono);font-size:10px">🛩 ${esc(s.aircraft)}</span>`:''}
-              ${!isExam?`<span>⏱ ${s.durationHrs}h</span>`:''}
-              ${s.hobbsLogged&&!canc?`<span style="color:#3b82f6;font-weight:600">✓ ${s.hobbsLogged}h</span>`:''}
+              ${!isExam?`<span>Dual ${s.durationHrs}h</span>`:''}
+              ${s.hobbsLogged&&!canc?`<span style="color:${accentColor};font-weight:600">✓ ${s.hobbsLogged}h</span>`:''}
             </div>
-            ${s.notes?`<div style="margin-top:5px;font-size:11px;color:#475569;font-style:italic;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${esc(s.notes)}</div>`:''}
+            ${s.aircraft?`<div style="margin-top:6px;font-family:var(--mono);font-size:22px;font-weight:800;color:${cardBorder};letter-spacing:2px;opacity:0.6;line-height:1">${esc(s.aircraft)}</div>`:''}
+            ${s.notes?`<div style="margin-top:5px;font-size:11px;color:${metaColor};font-style:italic;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${esc(s.notes)}</div>`:''}
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:14px;padding:0" onclick="event.stopPropagation();toggleStatus('${s.id}')">⟳</button>
-            <button class="btn44" style="width:40px;height:40px;background:#064e3b;border:1px solid #22c55e33;border-radius:10px;color:#86efac;font-size:14px;padding:0" title="Add to Calendar" onclick="event.stopPropagation();addToCalendar('${s.id}')">📅</button>
-            <button class="btn44" style="width:40px;height:40px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#ef4444;font-size:13px;padding:0" onclick="event.stopPropagation();deleteSession('${s.id}')">✕</button>
+            <button class="btn44" style="width:40px;height:40px;background:${btnBg};border:1px solid ${btnBorder};border-radius:10px;color:${metaColor};font-size:14px;padding:0" onclick="event.stopPropagation();toggleStatus('${s.id}')">⟳</button>
+            <button class="btn44" style="width:40px;height:40px;background:${btnBg};border:1px solid ${btnBorder};border-radius:10px;color:${accentColor};font-size:14px;padding:0" title="Add to Calendar" onclick="event.stopPropagation();addToCalendar('${s.id}')">📅</button>
+            <button class="btn44" style="width:40px;height:40px;background:${btnBg};border:1px solid ${btnBorder};border-radius:10px;color:#ef4444;font-size:13px;padding:0" onclick="event.stopPropagation();deleteSession('${s.id}')">✕</button>
           </div>
         </div>
       </div>`;
@@ -720,7 +745,7 @@ function render() {
 <button onclick="signOut()" style="background:#1e293b; border:none; color:#94a3b8; font-size:10px; font-weight:700; cursor:pointer; margin-left:8px; padding:4px 8px; border-radius:6px; font-family:var(--font);">SIGN OUT</button>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
-          <p style="font-size:11px;color:#475569">NPPL (Microlight) · Flylight Dragonfly · G-FLYB</p>
+          <p style="font-size:11px;color:#475569">NPPL (Microlight) · Ikarus C42</p>
           <span id="save-indicator" style="font-size:9px"></span>
         </div>
       </div>
