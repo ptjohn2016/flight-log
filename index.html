@@ -936,75 +936,28 @@ function resetBlock() {
 }
 
 function handleDayClick(dateStr) {
-  // Find direct matches and away entries that span this date
-  const ds = state.sessions.filter(s => {
-    if (s.date === dateStr) return true;
-    if (s.status === "away" && s.dateEnd && s.date <= dateStr && s.dateEnd >= dateStr) return true;
-    return false;
-  });
+  // Check for away entry covering this date (including ranges)
+  const away = getAwayForDate(dateStr);
+
+  // Find direct-date matches (not range-expanded)
+  const ds = state.sessions.filter(s => s.date === dateStr);
   const nonClosed = ds.filter(s=>s.status!=="closed"&&s.status!=="away");
   const closures = ds.filter(s=>s.status==="closed");
-  const aways = ds.filter(s=>s.status==="away");
+  const directAways = ds.filter(s=>s.status==="away");
 
-  // If this day has an away entry, show quick-action popup
-  if (aways.length > 0 && nonClosed.length === 0 && closures.length === 0) {
-    showAwayPopup(dateStr, aways[0]);
+  // Away day (from range or direct) with nothing else booked → open away for editing
+  if (away && nonClosed.length === 0 && closures.length === 0) {
+    openEdit(away.id);
     return;
   }
 
-  if (nonClosed.length===1&&closures.length===0&&aways.length===0) openEdit(nonClosed[0].id);
-  else if (closures.length===1&&nonClosed.length===0&&aways.length===0) openEdit(closures[0].id);
+  if (nonClosed.length===1&&closures.length===0) openEdit(nonClosed[0].id);
+  else if (closures.length===1&&nonClosed.length===0) openEdit(closures[0].id);
   else if (ds.length===0) {
-    // If the date is away, show the popup instead of opening new session
-    const away = getAwayForDate(dateStr);
-    if (away) { showAwayPopup(dateStr, away); return; }
+    // Empty day but covered by an away range → open the away
+    if (away) { openEdit(away.id); return; }
     openNewSession(dateStr);
   }
-}
-
-function showAwayPopup(dateStr, awayEntry) {
-  // Remove any existing popup
-  closeAwayPopup();
-
-  const awayNote = (awayEntry.notes || "").trim();
-  const rangeLabel = awayEntry.dateEnd && awayEntry.dateEnd !== awayEntry.date
-    ? `${fmtDate(awayEntry.date)} → ${fmtDate(awayEntry.dateEnd)}`
-    : fmtDate(awayEntry.date);
-
-  const popup = document.createElement("div");
-  popup.id = "away-popup";
-  popup.innerHTML = `
-    <div class="new-menu-backdrop" onclick="closeAwayPopup()"></div>
-    <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:301;background:linear-gradient(135deg,#1a1040,#251560);border:1px solid #7c3aed;border-radius:16px;padding:0;min-width:280px;max-width:90vw;box-shadow:0 24px 80px rgba(0,0,0,0.7);overflow:hidden">
-      <div style="padding:16px 18px 12px;border-bottom:1px solid #7c3aed44">
-        <div style="font-size:18px;font-weight:700;color:#c4b5fd;margin-bottom:4px">🏖️ Holiday / Away</div>
-        <div style="font-family:var(--mono);font-size:12px;color:#a78bfa;margin-bottom:2px">${rangeLabel}</div>
-        ${awayNote ? `<div style="font-size:12px;color:#7c3aed;font-style:italic;margin-top:4px">${esc(awayNote)}</div>` : ''}
-      </div>
-      <div style="padding:6px">
-        <div class="new-menu-item" style="color:#c4b5fd;border-radius:10px" onclick="closeAwayPopup();openEdit('${awayEntry.id}')">
-          <span style="font-size:16px">✏️</span> Edit Holiday
-        </div>
-        <div class="new-menu-item" style="color:#fca5a5;border-radius:10px" onclick="removeAwayFromPopup('${awayEntry.id}')">
-          <span style="font-size:16px">🗑️</span> Remove Holiday
-        </div>
-      </div>
-    </div>
-  `;
-  popup.style.cssText = "position:fixed;inset:0;z-index:300;";
-  document.body.appendChild(popup);
-}
-
-function closeAwayPopup() {
-  const existing = document.getElementById("away-popup");
-  if (existing) existing.remove();
-}
-
-function removeAwayFromPopup(id) {
-  closeAwayPopup();
-  if (!confirm("Remove this holiday / away period?")) return;
-  state.sessions = state.sessions.filter(s => s.id !== id);
-  save(); render();
 }
 
 /* ═══════════════════════════════════════════
@@ -1229,9 +1182,6 @@ window.deleteSession = deleteSession;
 window.toggleStatus = toggleStatus;
 window.resetBlock = resetBlock;
 window.handleDayClick = handleDayClick;
-window.showAwayPopup = showAwayPopup;
-window.closeAwayPopup = closeAwayPopup;
-window.removeAwayFromPopup = removeAwayFromPopup;
 window.addToCalendar = addToCalendar;
 window.addToCalendarFromForm = addToCalendarFromForm;
 
