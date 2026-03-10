@@ -909,6 +909,10 @@ function toggleNewMenu() {
   const m = document.getElementById("new-menu");
   if (m) m.style.display = m.style.display==="none"?"block":"none";
 }
+function closeNewMenu() {
+  const m = document.getElementById("new-menu");
+  if (m) m.style.display = "none";
+}
 function setFilter(f) { state.filter=f; render(); }
 function toggleSort() { state.sortAsc=!state.sortAsc; render(); }
 
@@ -1123,19 +1127,19 @@ function renderForm() {
 function openNewSession(prefillDate) {
   formState = { mode: "session", editing: null, data: { ...JSON.parse(JSON.stringify(EMPTY_SESSION)), date: prefillDate||"" } };
   formState.data.id = null;
-  toggleNewMenu();
+  closeNewMenu();
   renderForm();
 }
 function openNewClosure(prefillDate) {
   formState = { mode: "closure", editing: null, data: { ...JSON.parse(JSON.stringify(EMPTY_CLOSURE)), date: prefillDate||"" } };
   formState.data.id = null;
-  toggleNewMenu();
+  closeNewMenu();
   renderForm();
 }
 function openNewAway(prefillDate) {
   formState = { mode: "away", editing: null, data: { ...JSON.parse(JSON.stringify(EMPTY_AWAY)), date: prefillDate||"" } };
   formState.data.id = null;
-  toggleNewMenu();
+  closeNewMenu();
   renderForm();
 }
 function openEdit(id) {
@@ -1208,6 +1212,7 @@ function deleteAndClose() {
 
 // Make functions global
 window.toggleNewMenu = toggleNewMenu;
+window.closeNewMenu = closeNewMenu;
 window.openNewSession = openNewSession;
 window.openNewClosure = openNewClosure;
 window.openNewAway = openNewAway;
@@ -1216,6 +1221,8 @@ window.closeForm = closeForm;
 window.saveForm = saveForm;
 window.deleteAndClose = deleteAndClose;
 window.setInstructor = setInstructor;
+window.readForm = readForm;
+window.renderForm = renderForm;
 window.setFilter = setFilter;
 window.toggleSort = toggleSort;
 window.deleteSession = deleteSession;
