@@ -68,7 +68,7 @@ button { font-family: var(--font); -webkit-tap-highlight-color: transparent; cur
 
 /* Calendar */
 .cal-strip { display: flex; gap: 6px; overflow-x: auto; padding: 0 14px 8px; -webkit-overflow-scrolling: touch; }
-.cal-day { flex-shrink: 0; width: 64px; border-radius: 12px; padding: 8px 2px 6px; text-align: center; min-height: 82px; position: relative; -webkit-tap-highlight-color: transparent; }
+.cal-day { flex-shrink: 0; width: 64px; border-radius: 12px; padding: 8px 2px 6px; text-align: center; min-height: 82px; position: relative; -webkit-tap-highlight-color: transparent; overflow: hidden; }
 @media (min-width: 768px) {
   .cal-day { width: 80px; min-height: 92px; padding: 10px 4px 8px; }
 }
@@ -686,9 +686,9 @@ function render() {
     // Inner content: show status label or time
     let inner = "";
     if (closed) {
-      inner = `<div style="font-size:7px;font-weight:700;color:${labelColor};line-height:1.2;padding:1px 3px;white-space:nowrap">${esc(labelText)}</div>`;
+      inner = `<div style="font-size:7px;font-weight:700;color:${labelColor};line-height:1.2;padding:1px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${esc(labelText)}</div>`;
     } else if (hasAway && !hasLesson) {
-      inner = `<div style="font-size:7px;font-weight:700;color:${labelColor};line-height:1.2;padding:1px 3px;white-space:nowrap">🏖️ ${esc(labelText)}</div>`;
+      inner = `<div style="font-size:7px;font-weight:700;color:${labelColor};line-height:1.2;padding:1px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${esc(labelText)}</div>`;
     } else if (hasLesson) {
       // Show time + status label
       const timeStr = fmtTime(dominantSession.time);
