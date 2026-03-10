@@ -206,7 +206,7 @@ const LESSON_TYPES = [
 ];
 const EXAM_TYPES = ["Exam – Aviation Law","Exam – Meteorology","Exam – Navigation","Exam – Human Performance & Limitations","Exam – Aircraft Technical"];
 const ALL_TYPES = [...LESSON_TYPES, ...EXAM_TYPES];
-const INSTRUCTORS = ["Paul Haskins", "Mark Peters", "Paul Bennett"];
+const INSTRUCTORS = ["Paul Haskins", "Mark Peters", "Paul Bennet"];
 const STATUSES = [
   { v: "confirmed", l: "Confirmed", c: "#22c55e", bg: "#052e16" },
   { v: "tentative", l: "Tentative", c: "#eab308", bg: "#422006" },
@@ -347,6 +347,22 @@ function badge(status, small) {
 }
 function getInstructor(s) { return s.instructor==="__custom__" ? s.customInstructor : s.instructor; }
 function hoursUsed() { return state.sessions.filter(s=>s.status!=="cancelled"&&s.status!=="closed"&&s.hobbsLogged).reduce((sum,s)=>sum+(parseFloat(s.hobbsLogged)||0),0); }
+
+function getAwayForDate(dateStr) {
+  return state.sessions.find(s => {
+    if (s.status !== "away") return false;
+    if (s.dateEnd && s.dateEnd >= s.date) return dateStr >= s.date && dateStr <= s.dateEnd;
+    return s.date === dateStr;
+  }) || null;
+}
+function isDateAway(dateStr, excludeId) {
+  return state.sessions.some(s => {
+    if (s.status !== "away") return false;
+    if (excludeId && s.id === excludeId) return false;
+    if (s.dateEnd && s.dateEnd >= s.date) return dateStr >= s.date && dateStr <= s.dateEnd;
+    return s.date === dateStr;
+  });
+}
 
 /* ═══════════════════════════════════════════
    ADD TO CALENDAR (.ics generation)
@@ -684,8 +700,8 @@ function render() {
       }
     }
 
-    return `<div class="cal-day" style="background:${bg};border:${border};cursor:${wClosed&&!hasLesson?'default':'pointer'}" 
-      ${wClosed&&!hasLesson?'':`onclick="handleDayClick('${key}')"`}>
+    return `<div class="cal-day" style="background:${bg};border:${border};cursor:${wClosed&&!hasLesson&&!hasAway?'default':'pointer'}" 
+      ${wClosed&&!hasLesson&&!hasAway?'':`onclick="handleDayClick('${key}')"`}>
       <div style="font-size:9px;color:${dayColor};font-weight:700;text-transform:uppercase">${DN[d.getDay()]}</div>
       <div style="font-size:18px;font-weight:800;color:${numColor};font-family:var(--mono);line-height:1.3">${d.getDate()}</div>
       <div style="font-size:8px;color:${monthColor};margin-bottom:3px">${MN[d.getMonth()]}</div>
@@ -925,10 +941,66 @@ function handleDayClick(dateStr) {
   const nonClosed = ds.filter(s=>s.status!=="closed"&&s.status!=="away");
   const closures = ds.filter(s=>s.status==="closed");
   const aways = ds.filter(s=>s.status==="away");
+
+  // If this day has an away entry, show quick-action popup
+  if (aways.length > 0 && nonClosed.length === 0 && closures.length === 0) {
+    showAwayPopup(dateStr, aways[0]);
+    return;
+  }
+
   if (nonClosed.length===1&&closures.length===0&&aways.length===0) openEdit(nonClosed[0].id);
   else if (closures.length===1&&nonClosed.length===0&&aways.length===0) openEdit(closures[0].id);
-  else if (aways.length===1&&nonClosed.length===0&&closures.length===0) openEdit(aways[0].id);
-  else if (ds.length===0) openNewSession(dateStr);
+  else if (ds.length===0) {
+    // If the date is away, show the popup instead of opening new session
+    const away = getAwayForDate(dateStr);
+    if (away) { showAwayPopup(dateStr, away); return; }
+    openNewSession(dateStr);
+  }
+}
+
+function showAwayPopup(dateStr, awayEntry) {
+  // Remove any existing popup
+  closeAwayPopup();
+
+  const awayNote = (awayEntry.notes || "").trim();
+  const rangeLabel = awayEntry.dateEnd && awayEntry.dateEnd !== awayEntry.date
+    ? `${fmtDate(awayEntry.date)} → ${fmtDate(awayEntry.dateEnd)}`
+    : fmtDate(awayEntry.date);
+
+  const popup = document.createElement("div");
+  popup.id = "away-popup";
+  popup.innerHTML = `
+    <div class="new-menu-backdrop" onclick="closeAwayPopup()"></div>
+    <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:301;background:linear-gradient(135deg,#1a1040,#251560);border:1px solid #7c3aed;border-radius:16px;padding:0;min-width:280px;max-width:90vw;box-shadow:0 24px 80px rgba(0,0,0,0.7);overflow:hidden">
+      <div style="padding:16px 18px 12px;border-bottom:1px solid #7c3aed44">
+        <div style="font-size:18px;font-weight:700;color:#c4b5fd;margin-bottom:4px">🏖️ Holiday / Away</div>
+        <div style="font-family:var(--mono);font-size:12px;color:#a78bfa;margin-bottom:2px">${rangeLabel}</div>
+        ${awayNote ? `<div style="font-size:12px;color:#7c3aed;font-style:italic;margin-top:4px">${esc(awayNote)}</div>` : ''}
+      </div>
+      <div style="padding:6px">
+        <div class="new-menu-item" style="color:#c4b5fd;border-radius:10px" onclick="closeAwayPopup();openEdit('${awayEntry.id}')">
+          <span style="font-size:16px">✏️</span> Edit Holiday
+        </div>
+        <div class="new-menu-item" style="color:#fca5a5;border-radius:10px" onclick="removeAwayFromPopup('${awayEntry.id}')">
+          <span style="font-size:16px">🗑️</span> Remove Holiday
+        </div>
+      </div>
+    </div>
+  `;
+  popup.style.cssText = "position:fixed;inset:0;z-index:300;";
+  document.body.appendChild(popup);
+}
+
+function closeAwayPopup() {
+  const existing = document.getElementById("away-popup");
+  if (existing) existing.remove();
+}
+
+function removeAwayFromPopup(id) {
+  closeAwayPopup();
+  if (!confirm("Remove this holiday / away period?")) return;
+  state.sessions = state.sessions.filter(s => s.id !== id);
+  save(); render();
 }
 
 /* ═══════════════════════════════════════════
@@ -978,12 +1050,16 @@ function renderForm() {
   } else {
     const dateWarn = f.date && isWeekendClosed(f.date);
     const dayNum = f.date ? new Date(f.date+"T00:00:00").getDay() : -1;
+    const awayWarn = f.date && isDateAway(f.date, formState.editing);
+    const awayEntry = f.date ? getAwayForDate(f.date) : null;
+    const awayNote = awayEntry && awayEntry.notes ? awayEntry.notes : "";
     body = `
       <div style="margin-bottom:16px"><label class="label">Session Type</label><select id="f-type">${buildTypeOptions()}</select></div>
       <div class="grid2" style="margin-bottom:16px">
-        <div><label class="label">Date *</label><input type="date" id="f-date" value="${f.date||''}"></div>
+        <div><label class="label">Date *</label><input type="date" id="f-date" value="${f.date||''}" onchange="readForm();renderForm()"></div>
         <div><label class="label">Time *</label><input type="time" id="f-time" value="${f.time||''}"></div>
       </div>
+      ${awayWarn?`<div style="margin-bottom:14px;padding:10px 12px;background:#1e1145;border:1px solid #7c3aed;border-radius:8px;font-size:12px;color:#c4b5fd;display:flex;align-items:center;gap:8px">🏖️ <strong>You're away this day${awayNote?' — '+esc(awayNote):''}.</strong> You cannot book a session while on holiday.</div>`:''}
       ${dateWarn?`<div style="margin-bottom:14px;padding:8px 12px;background:#422006;border:1px solid #eab30833;border-radius:8px;font-size:12px;color:#fde68a;display:flex;align-items:center;gap:8px">⚠️ ${dayNum===0?'Sunday — airfield restricted':'Monday — airfield closed'}</div>`:''}
       <div style="margin-bottom:16px"><label class="label">Status</label><select id="f-status">${BOOKING_STATUSES.map(s=>`<option value="${s.v}"${f.status===s.v?' selected':''}>${s.l}</option>`).join("")}</select></div>
       ${!isExam?`
@@ -1107,6 +1183,12 @@ function saveForm() {
   if (!f.date) return;
   if (formState.mode === "session" && !f.time) return;
 
+  // Block booking sessions on away days
+  if (formState.mode === "session" && isDateAway(f.date, formState.editing)) {
+    alert("You can't book a session on a day you're marked as away. Remove the holiday first if your plans have changed.");
+    return;
+  }
+
   if (formState.editing) {
     state.sessions = state.sessions.map(s => s.id === formState.editing ? { ...f, id: formState.editing } : s);
   } else {
@@ -1140,6 +1222,9 @@ window.deleteSession = deleteSession;
 window.toggleStatus = toggleStatus;
 window.resetBlock = resetBlock;
 window.handleDayClick = handleDayClick;
+window.showAwayPopup = showAwayPopup;
+window.closeAwayPopup = closeAwayPopup;
+window.removeAwayFromPopup = removeAwayFromPopup;
 window.addToCalendar = addToCalendar;
 window.addToCalendarFromForm = addToCalendarFromForm;
 
