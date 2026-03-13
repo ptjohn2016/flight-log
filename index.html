@@ -300,9 +300,19 @@ function signOut() {
   auth.signOut();
 }
 
+// Get the user-scoped Firestore document reference
+function getUserDoc() {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Not authenticated");
+  return db.collection("flightlog").doc(user.uid);
+}
+
 async function load() {
+  // Track whether cloud load succeeded (even if empty) vs failed entirely
+  state._cloudLoadOk = false;
   try {
-    const docSnap = await db.collection("flightlog").doc("mysessions").get();
+    const docSnap = await getUserDoc().get();
+    state._cloudLoadOk = true; // Cloud responded — even if doc doesn't exist yet
     if (docSnap.exists) {
       const data = docSnap.data();
       if (data.sessions) state.sessions = data.sessions;
@@ -319,8 +329,8 @@ async function save() {
     // Save locally as a backup just in case
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessions: state.sessions, savedAt: new Date().toISOString() }));
     
-    // Push to the cloud
-    await db.collection("flightlog").doc("mysessions").set({
+    // Push to the cloud (user-scoped)
+    await getUserDoc().set({
       sessions: state.sessions,
       lastUpdated: new Date().toISOString()
     });
@@ -1356,8 +1366,15 @@ window.addEventListener("unhandledrejection", (e) => showBootError(e.reason));
       if (app) app.innerHTML = '<div style="padding:40px; text-align:center; color:#94a3b8; font-family:var(--mono);">Syncing with cloud...</div>';
       try {
         await load();
+        // Only seed with defaults if this is genuinely a first-time user
+        // (cloud load succeeded but doc doesn't exist yet, AND no local backup)
         if (!Array.isArray(state.sessions) || state.sessions.length === 0) {
-          state.sessions = Array.isArray(DEFAULT_SESSIONS) ? DEFAULT_SESSIONS.slice() : [];
+          if (state._cloudLoadOk) {
+            // Cloud responded fine — user just has no data yet. Use defaults only if empty.
+            state.sessions = Array.isArray(DEFAULT_SESSIONS) ? DEFAULT_SESSIONS.slice() : [];
+          }
+          // If cloud failed and local backup was also empty, sessions stays as-is (empty)
+          // but we do NOT overwrite cloud with empty data
         }
         render();
       } catch (e) {
