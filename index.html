@@ -308,14 +308,24 @@ function getUserDoc() {
 }
 
 async function load() {
-  // Track whether cloud load succeeded (even if empty) vs failed entirely
   state._cloudLoadOk = false;
   try {
     const docSnap = await getUserDoc().get();
-    state._cloudLoadOk = true; // Cloud responded — even if doc doesn't exist yet
+    state._cloudLoadOk = true; 
+    
     if (docSnap.exists) {
       const data = docSnap.data();
       if (data.sessions) state.sessions = data.sessions;
+    } else {
+      // 1. MIGRATION FIX: If the cloud is empty, check if this specific computer has the missing local data
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) { 
+        const d = JSON.parse(raw); 
+        if (d.sessions && d.sessions.length > 0) {
+          state.sessions = d.sessions;
+          save(); // Push the old local data into the empty cloud database
+        }
+      }
     }
   } catch(e) {
     console.error("Cloud load failed, checking local backup:", e);
@@ -326,10 +336,16 @@ async function load() {
 
 async function save() {
   try {
-    // Save locally as a backup just in case
+    // Save locally as a backup 
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessions: state.sessions, savedAt: new Date().toISOString() }));
     
-    // Push to the cloud (user-scoped)
+    // 2. GUARDRAIL FIX: Stop the app from wiping the cloud if the initial load failed
+    if (state._cloudLoadOk === false) {
+      alert("Warning: App is currently disconnected from the cloud. Saved locally, but cloud sync was paused to prevent wiping your colleague's data. Please refresh the page.");
+      return;
+    }
+
+    // Push to the cloud 
     await getUserDoc().set({
       sessions: state.sessions,
       lastUpdated: new Date().toISOString()
@@ -339,14 +355,6 @@ async function save() {
     console.error("Cloud save failed:", e); 
     alert("Saved locally, but failed to sync to the cloud. Check your connection.");
   }
-}
-
-function showSaved() {
-  const el = document.getElementById("save-indicator");
-  if (!el) return;
-  el.textContent = "● Cloud Synced"; el.style.color = "#3b82f6"; // Changed to blue to indicate cloud
-  clearTimeout(el._t);
-  el._t = setTimeout(() => { el.textContent = ""; }, 2000);
 }
 
 /* ═══════════════════════════════════════════
