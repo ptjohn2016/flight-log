@@ -585,7 +585,7 @@ function render() {
   const filtered = state.sessions
     .filter(s => {
       if (state.filter === "all") return true;
-      if (state.filter === "upcoming") return s.status === "confirmed" || s.status === "tentative";
+      if (state.filter === "upcoming") return (s.status === "confirmed" || s.status === "tentative") && new Date(s.date) >= today;
       return s.status === state.filter;
     })
     .sort((a,b) => {
