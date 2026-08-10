@@ -433,7 +433,7 @@ const DEFAULT_SETTINGS = {
   instructors: ["Paul Haskins", "Mark Peters", "Paul Bennet"],
   aircraft: [{ reg: "", type: "Ikarus C42" }],
   defaultSlotMins: 90,
-  calendar: { reminderMins: 120 }
+  calendar: { provider: "outlook", reminderMins: 120 }
 };
 
 /* NPPL(M) syllabus. `id` is stable — never renumber, progress keys off it. */
@@ -1182,6 +1182,82 @@ function icsExport(idOrEntry) {
   save({ silent: true });
   return handoff;
 }
+/* ── Deep links ────────────────────────────────────────────────────────
+   Why not just hand iOS the .ics file?
+
+   Because the iOS Calendar app is not a share-sheet target. It registers as
+   a document *handler* — it can open an .ics that already exists as a file
+   (tapped in Files, or as a Mail attachment) but it never appears in the
+   share menu. So navigator.share() on an .ics can only ever offer Messages,
+   Save to Files and AirDrop, which is exactly what it did.
+
+   A deep link sidesteps the file entirely: it opens Outlook with the event
+   already filled in and you tap Save. It goes to the real M365 calendar
+   server-side, so it syncs down to the phone whichever app displays it.
+
+   The trade-off, stated plainly: a deep link carries no UID, so tapping it
+   twice creates two events. The .ics route dedupes properly but can't be
+   opened conveniently on iOS. Pick your poison in Settings; the app warns
+   you either way. */
+const CAL_PROVIDERS = [
+  { id:"outlook",  label:"Outlook — work / M365", hint:"Opens outlook.office.com", dedupes:false },
+  { id:"outlookPersonal", label:"Outlook — personal", hint:"Opens outlook.live.com", dedupes:false },
+  { id:"google",   label:"Google Calendar",       hint:"Opens calendar.google.com", dedupes:false },
+  { id:"ics",      label:".ics file",             hint:"Save to Files, then open it there", dedupes:true }
+];
+function providerOf(id) { return CAL_PROVIDERS.find(p => p.id === (id || state.settings.calendar.provider)) || CAL_PROVIDERS[0]; }
+
+function eventWindowUTC(e) {
+  const w = slotWindow(e), zone = calendarZone();
+  const endDate = (minsOf(w.end) != null && minsOf(w.start) != null && minsOf(w.end) < minsOf(w.start))
+    ? dkey(addDays(parseDate(e.date), 1)) : e.date;
+  return { start: zonedToUTC(e.date, w.start, zone), end: zonedToUTC(endDate, w.end, zone) };
+}
+
+function calendarUrl(e, provider) {
+  const { start, end } = eventWindowUTC(e);
+  const subject = eventSubject(e);
+  const body    = eventDescription(e);
+  const location = state.settings.base.name + " Airfield";
+  const isoZ = d => d.toISOString().replace(/\.\d{3}Z$/, "Z");
+
+  if (provider === "google") {
+    const p = new URLSearchParams({
+      action: "TEMPLATE", text: subject, details: body, location: location,
+      dates: icsStamp(start) + "/" + icsStamp(end)
+    });
+    return "https://calendar.google.com/calendar/render?" + p.toString();
+  }
+  const host = provider === "outlookPersonal" ? "https://outlook.live.com" : "https://outlook.office.com";
+  const p = new URLSearchParams({
+    path: "/calendar/action/compose", rru: "addevent",
+    subject: subject, body: body, location: location,
+    startdt: isoZ(start), enddt: isoZ(end), allday: "false"
+  });
+  return host + "/calendar/0/deeplink/compose?" + p.toString();
+}
+
+/* Must run synchronously off the tap — window.open from a timer or after an
+   await is treated as an unrequested popup and blocked. */
+function openCalendarLink(e, provider) {
+  const url = calendarUrl(e, provider);
+  /* Do NOT pass "noopener" in the features string — window.open then returns
+     null by spec even on success, the fallback below fires as well, and you
+     get two tabs. Null the opener on the handle instead. */
+  let win = null;
+  try { win = window.open(url, "_blank"); } catch (_) {}
+  if (win) { try { win.opener = null; } catch (_) {} }
+  else {
+    const a = document.createElement("a");
+    a.href = url; a.target = "_blank"; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  e.icsSeq = (e.icsSeq || 0) + 1;
+  e.calExportedAt = nowISO();
+  e.calProvider = provider;
+  save({ silent: true });
+}
+
 function icsExportAll() {
   const from = dkey(addDays(new Date(), -14));
   const list = state.entries.filter(x => x.date >= from && x.status !== "cancelled");
@@ -1606,7 +1682,7 @@ function entryCard(e) {
         <span class="tiny mono" style="color:${s.c}">${esc(fmtDateLong(e.date))}</span>
         ${e.start ? `<span class="tiny mono muted">${esc(w.start)}–${esc(w.end)}</span>` : ""}
         <span class="chip" style="color:${s.c};background:${s.bg};border-color:${s.c}44"><span class="dot" style="background:${s.c}"></span>${s.l}</span>
-        ${staleCal ? `<span class="chip" style="color:var(--warn);background:var(--warn-dim);border-color:#f59e0b44" title="Changed since you added it — tap 📅 to update the calendar">📅 changed</span>`
+        ${staleCal ? `<span class="chip" style="color:var(--warn);background:var(--warn-dim);border-color:#f59e0b44" title="Changed since you added it — update the event in your calendar">📅 changed</span>`
           : exported ? `<span class="chip" style="color:var(--tx3);border-color:var(--line)" title="Added to your calendar">📅</span>` : ""}
         ${e.kind === "exam" && e.status === "completed" ? resultChip(e.examResult) : ""}
       </div>
@@ -2139,12 +2215,55 @@ function onDayTap(dateStr) {
   openEntry(null, "flight", dateStr);
 }
 
-/* Called straight from the 📅 button. Deliberately not async before the
-   share — see the ordering note above icsExport(). */
+/* Called straight from the 📅 button. Nothing may be awaited before the
+   window.open / share call or the browser treats it as an unrequested popup. */
 function calendarAction(id) {
-  const p = icsExport(id);
-  if (p && p.then) p.then(() => render());
-  return p;
+  const e = typeof id === "string" ? state.entries.find(x => x.id === id) : id;
+  if (!e) return;
+  if (!e.date) { toast("Set a date first", "bad"); return; }
+  const provider = state.settings.calendar.provider || "outlook";
+  if (provider === "ics") {
+    const p = icsExport(e);
+    if (p && p.then) p.then(() => render());
+    return p;
+  }
+  openCalendarLink(e, provider);
+  setTimeout(render, 300);
+}
+
+/* "Add it a different way" — offered from the lesson form, so a route that
+   doesn't suit your phone is never a dead end. */
+function openCalendarChooser(id) {
+  const e = typeof id === "string" ? state.entries.find(x => x.id === id) : id;
+  if (!e || !e.date) { toast("Set a date first", "bad"); return; }
+  window.__calTarget = e;
+  openSheet2(`
+    <div class="sheet-panel">
+      <div class="sheet-head">
+        <button class="btn ghost sm" onclick="closeSheet2()">Close</button>
+        <h2>Add to calendar</h2><span style="width:56px"></span>
+      </div>
+      <div class="sheet-body stack">
+        ${CAL_PROVIDERS.map(p => `
+          <button class="opt" style="align-items:flex-start" onclick="chooseCalendarRoute('${p.id}')">
+            <span class="rc" style="margin-top:2px"><i></i></span>
+            <span style="flex:1;min-width:0">
+              <span style="display:block;font-weight:700">${esc(p.label)}</span>
+              <span class="tiny muted">${esc(p.hint)}</span>
+            </span>
+          </button>`).join("")}
+        <div class="note info tiny">Whichever you pick becomes the default for the 📅 button. Only the .ics route can update an event you've already added — the others create a new one each time.</div>
+      </div>
+    </div>`);
+}
+function chooseCalendarRoute(provider) {
+  const e = window.__calTarget;
+  state.settings.calendar.provider = provider;
+  closeSheet2();
+  if (!e) return;
+  if (provider === "ics") { const p = icsExport(e); if (p && p.then) p.then(() => render()); return; }
+  openCalendarLink(e, provider);
+  setTimeout(render, 300);
 }
 
 /* ═══ 8c. ENTRY FORM ═════════════════════════════════════════════════════ */
@@ -2304,11 +2423,14 @@ function lessonForm(f) {
     <textarea id="i-notes" rows="4" placeholder="Briefing points, debrief, what to work on…">${esc(f.notes)}</textarea></div>
 
   <div class="stack">
-    <button class="btn ok block" onclick="calendarFromForm()">📅 Add to calendar</button>
+    <button class="btn ok block" onclick="calendarFromForm()">📅 Add to ${esc(providerOf().label.split(" — ")[0])}</button>
+    <button class="btn ghost sm block" onclick="calendarFromForm(true)">Add it a different way…</button>
     <div class="hint" style="text-align:center">
       ${(f.icsSeq || 0) > 0
-        ? "Already added once. Adding again updates the same event rather than duplicating it."
-        : "Opens the iOS share sheet — choose Calendar or Outlook, then pick which calendar."}
+        ? (providerOf(f.calProvider).dedupes
+            ? "Already added. Adding again updates that event rather than duplicating it."
+            : "Already added once — adding again will create a <strong>second</strong> event. Edit the existing one in your calendar instead.")
+        : "Opens your calendar with the details filled in. Tap Save there to confirm."}
     </div>
   </div>
   ${deleteBtn()}`;
@@ -2455,7 +2577,7 @@ async function saveEntry() {
 /* Add-to-calendar from inside the form: pick up whatever is on screen first,
    then hand off. readFormDom() is synchronous, so the tap's user activation
    survives and Safari allows the share sheet. */
-function calendarFromForm() {
+function calendarFromForm(chooser) {
   readFormDom();
   const f = form.data;
   if (!f.date) { toast("Set a date first", "bad"); return; }
@@ -2464,8 +2586,10 @@ function calendarFromForm() {
      just because the form was never saved. */
   if (!form.id) { state.entries.push(f); form.id = f.id; }
   else state.entries = state.entries.map(x => x.id === form.id ? f : x);
-  const p = icsExport(f);
+  if (chooser) return openCalendarChooser(f);
+  const p = calendarAction(f);
   if (p && p.then) p.then(() => { renderForm(); render(); });
+  else setTimeout(() => { renderForm(); render(); }, 300);
   return p;
 }
 
@@ -2484,11 +2608,27 @@ function openSettings(focus) {
 
       <h3 class="mb3">📅 Calendar</h3>
       <div class="card tight mb4">
-        <p class="tiny muted mb3">The 📅 button on any lesson opens the iOS share sheet. Choose <strong>Calendar</strong> or <strong>Outlook</strong>, then pick which calendar it lands in — including your work one. Adding the same lesson again updates that event instead of duplicating it.</p>
+        <div class="field"><label class="label">The 📅 button should…</label>
+          <div class="stack" style="gap:6px">
+            ${CAL_PROVIDERS.map(p => `
+              <button class="opt ${s.calendar.provider === p.id ? "on" : ""}" style="align-items:flex-start" onclick="setCalProvider('${p.id}')">
+                <span class="rc" style="margin-top:2px"><i></i></span>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font-weight:700">${esc(p.label)}</span>
+                  <span class="tiny muted">${esc(p.hint)}</span>
+                </span>
+              </button>`).join("")}
+          </div>
+        </div>
+        <div class="note info tiny mb3">
+          Deep links open the calendar with the event filled in — you tap Save there. They can't
+          update an event you've already added, so tapping 📅 twice makes two events.
+          The .ics route <em>can</em> update, but on iPhone the Calendar app never appears in the
+          share sheet, so you have to Save to Files and open it from there.
+        </div>
         <div class="field"><label class="label">Reminder (minutes before)</label>
           <input type="number" step="15" min="0" id="s-remind" value="${escAttr(s.calendar.reminderMins)}"></div>
-        <button class="btn sm block" onclick="icsExportAll()">Add all upcoming to calendar</button>
-        <div class="note info tiny mt3">The calendar doesn't follow later edits by itself. If you change a lesson's date or time, its card shows <strong>📅 changed</strong> — tap 📅 again to update it.</div>
+        <button class="btn sm block" onclick="icsExportAll()">Export all upcoming as one .ics</button>
       </div>
 
       <h3 class="mb3">🎯 Progress targets</h3>
@@ -2586,6 +2726,16 @@ async function saveSettings() {
   await save({ now: true });
   state.wx.fetchedAt = null;                 // base/limits may have moved
   closeSheet(); render(); toast("Settings saved", "ok");
+}
+
+function setCalProvider(id) {
+  /* Read the rest of the settings sheet first so the reminder box isn't lost
+     when the panel re-renders. */
+  const el = document.getElementById("s-remind");
+  if (el) state.settings.calendar.reminderMins = parseFloat(el.value) || state.settings.calendar.reminderMins;
+  state.settings.calendar.provider = id;
+  save({ silent: true });
+  openSettings();
 }
 
 function exportJSON() {
