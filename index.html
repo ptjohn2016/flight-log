@@ -7,12 +7,12 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Flight Log">
-<meta name="theme-color" content="#070b14">
+<meta name="theme-color" content="#eef6ff">
 <title>Flight Log — NPPL(M)</title>
 <!-- No external manifest file: it's built as a Blob at runtime (see boot) so
      this page works dropped in on its own. iOS Home Screen uses the
      apple-mobile-web-app-* meta tags above regardless. -->
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23070b14' width='100' height='100' rx='22'/><text y='70' x='50' text-anchor='middle' font-size='58'>✈</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%230ea5e9'/><stop offset='1' stop-color='%232563eb'/></linearGradient></defs><rect fill='url(%23g)' width='100' height='100' rx='22'/><text y='70' x='50' text-anchor='middle' font-size='58' fill='white'>✈</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -21,32 +21,119 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════════
-   DESIGN TOKENS
+   DESIGN TOKENS — "daytime VFR"
+
+   Light is the default: this is a Saturday-morning activity and the old
+   near-black panel read like a night IFR cockpit. Dark mode still exists,
+   but its steps are *chosen* against the dark surface rather than being an
+   inverted flip of the light ones — a flipped palette always looks muddy.
+
+   Status colours are reserved (confirmed / tentative / completed / cancelled
+   and the blocked-day states). They are never reused decoratively, and every
+   status is carried by a text label or icon as well as its colour, so none of
+   the meaning is colour-alone.
+
+   Per status there are four slots:
+     --s-x-ink   text on a tinted background   (contrast-checked)
+     --s-x-mark  saturated fill for bars, dots, rings
+     --s-x-bg    the tint itself
+     --s-x-line  border on the tint
    ═══════════════════════════════════════════════════════════════ */
 :root{
-  --bg:#070b14; --bg2:#0b1120;
-  --surface:#0e1524; --surface2:#131c2e; --surface3:#1a2438;
-  --line:#1e293b; --line2:#2b3a52;
-  --tx:#e8eef7; --tx2:#9fb0c7; --tx3:#6b7f99; --tx4:#4a5b73;
+  color-scheme: light;
 
-  --accent:#3b82f6; --accent2:#60a5fa; --accent-dim:#0f2038;
-  --ok:#22c55e; --ok-dim:#062916;
-  --warn:#f59e0b; --warn-dim:#2a1d05;
-  --bad:#ef4444; --bad-dim:#2c0b0b;
-  --violet:#a78bfa; --violet-dim:#1a1240;
-  --slate:#94a3b8; --slate-dim:#181d27;
+  --bg:#eef6ff; --bg2:#f7fbff;
+  --surface:#ffffff; --surface2:#f7fafd; --surface3:#eaf2fb;
+  --line:#dbe8f5; --line2:#bed3e9;
+  /* --tx3 is measured, not eyeballed: #587392 is the lightest step that still
+     clears WCAG AA (4.5:1) on BOTH the card surface and the page background. */
+  --tx:#0d2744; --tx2:#3b5a7c; --tx3:#587392; --tx4:#7b93ac;
 
-  --r-sm:8px; --r:12px; --r-lg:16px; --r-xl:22px;
+  --accent:#0284c7; --accent-ink:#0369a1; --accent2:#0ea5e9; --accent-dim:#e0f2fe;
+  --accent-grad:linear-gradient(135deg,#0ea5e9,#2563eb);
+
+  --s-confirmed-ink:#046c4e; --s-confirmed-mark:#10b981; --s-confirmed-bg:#e4f9f1; --s-confirmed-line:#a3e6cb;
+  --s-tentative-ink:#8a5406; --s-tentative-mark:#f59e0b; --s-tentative-bg:#fff6e3; --s-tentative-line:#f9d795;
+  --s-completed-ink:#1d4ed8; --s-completed-mark:#3b82f6; --s-completed-bg:#e7f0ff; --s-completed-line:#b9d0fb;
+  --s-cancelled-ink:#b3123c; --s-cancelled-mark:#f43f5e; --s-cancelled-bg:#ffe9ee; --s-cancelled-line:#fabecb;
+  --s-away-ink:#6428cf;      --s-away-mark:#8b5cf6;      --s-away-bg:#f1ebff;      --s-away-line:#d3c2fb;
+  --s-closed-ink:#44566b;    --s-closed-mark:#94a3b8;    --s-closed-bg:#edf2f8;    --s-closed-line:#c9d7e5;
+  --s-restricted-ink:#b0450c;--s-restricted-mark:#f97316;--s-restricted-bg:#fff1e6;--s-restricted-line:#fbc79b;
+  --s-weather-ink:#0e7490;   --s-weather-mark:#06b6d4;   --s-weather-bg:#e3f7fc;   --s-weather-line:#9fe4f2;
+
+  /* Aliases kept so older rules don't need touching */
+  --ok:var(--s-confirmed-mark);  --ok-ink:var(--s-confirmed-ink);  --ok-dim:var(--s-confirmed-bg);
+  --warn:var(--s-tentative-mark);--warn-ink:var(--s-tentative-ink);--warn-dim:var(--s-tentative-bg);
+  --bad:var(--s-cancelled-mark); --bad-ink:var(--s-cancelled-ink); --bad-dim:var(--s-cancelled-bg);
+  --violet:var(--s-away-mark);   --violet-ink:var(--s-away-ink);   --violet-dim:var(--s-away-bg);
+  --slate:var(--s-closed-mark);  --slate-ink:var(--s-closed-ink);  --slate-dim:var(--s-closed-bg);
+
+  --field:#f7fafd; --field-focus:#ffffff;
+  --shadow:0 1px 2px rgba(13,39,68,.06), 0 8px 24px rgba(13,39,68,.07);
+  --shadow-lg:0 8px 20px rgba(13,39,68,.10), 0 32px 64px rgba(13,39,68,.16);
+  --shadow-accent:0 6px 18px rgba(2,132,199,.28);
+  --hatch:rgba(13,39,68,.06);
+  --scrim:rgba(13,39,68,.42);
+
+  --r-sm:9px; --r:13px; --r-lg:18px; --r-xl:24px;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
-
   --font:'Outfit',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-
-  --shadow:0 8px 32px rgba(0,0,0,.45);
-  --shadow-lg:0 24px 64px rgba(0,0,0,.6);
-
   --tap:44px;
 }
+
+/* Dark: steps picked against the dark surface, not flipped. Warmer navy than
+   the old near-black so it reads as evening rather than a void. */
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ color-scheme: dark;
+  --bg:#0a1626; --bg2:#0e1d31;
+  --surface:#132340; --surface2:#182b4b; --surface3:#213655;
+  --line:#26415f; --line2:#365a80;
+  --tx:#eaf2fb; --tx2:#aac2db; --tx3:#7f9dbc; --tx4:#5c7a9c;
+
+  --accent:#38bdf8; --accent-ink:#7dd3fc; --accent2:#0ea5e9; --accent-dim:#0d3252;
+  --accent-grad:linear-gradient(135deg,#0ea5e9,#3b82f6);
+
+  --s-confirmed-ink:#6ee7b7; --s-confirmed-mark:#10b981; --s-confirmed-bg:#0c3a2b; --s-confirmed-line:#1b6b50;
+  --s-tentative-ink:#fcd34d; --s-tentative-mark:#f59e0b; --s-tentative-bg:#3b2b08; --s-tentative-line:#795912;
+  --s-completed-ink:#93c5fd; --s-completed-mark:#3b82f6; --s-completed-bg:#12294f; --s-completed-line:#2c4f92;
+  --s-cancelled-ink:#fda4af; --s-cancelled-mark:#f43f5e; --s-cancelled-bg:#421222; --s-cancelled-line:#8a2442;
+  --s-away-ink:#c4b5fd;      --s-away-mark:#8b5cf6;      --s-away-bg:#291d52;      --s-away-line:#4f3a94;
+  --s-closed-ink:#9fb3c8;    --s-closed-mark:#64748b;    --s-closed-bg:#1a2739;    --s-closed-line:#33485f;
+  --s-restricted-ink:#fdba74;--s-restricted-mark:#f97316;--s-restricted-bg:#3f230d;--s-restricted-line:#7b4518;
+  --s-weather-ink:#67e8f9;   --s-weather-mark:#06b6d4;   --s-weather-bg:#0b3441;   --s-weather-line:#166578;
+
+  --field:#0f1e35; --field-focus:#132440;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.34);
+  --shadow-lg:0 12px 28px rgba(0,0,0,.5), 0 40px 72px rgba(0,0,0,.55);
+  --shadow-accent:0 6px 18px rgba(56,189,248,.24);
+  --hatch:rgba(255,255,255,.05);
+  --scrim:rgba(2,8,18,.7);
+}}
+
+/* Manual override wins over the OS in both directions. */
+:root[data-theme="dark"]{ color-scheme: dark;
+  --bg:#0a1626; --bg2:#0e1d31;
+  --surface:#132340; --surface2:#182b4b; --surface3:#213655;
+  --line:#26415f; --line2:#365a80;
+  --tx:#eaf2fb; --tx2:#aac2db; --tx3:#7f9dbc; --tx4:#5c7a9c;
+  --accent:#38bdf8; --accent-ink:#7dd3fc; --accent2:#0ea5e9; --accent-dim:#0d3252;
+  --accent-grad:linear-gradient(135deg,#0ea5e9,#3b82f6);
+  --s-confirmed-ink:#6ee7b7; --s-confirmed-mark:#10b981; --s-confirmed-bg:#0c3a2b; --s-confirmed-line:#1b6b50;
+  --s-tentative-ink:#fcd34d; --s-tentative-mark:#f59e0b; --s-tentative-bg:#3b2b08; --s-tentative-line:#795912;
+  --s-completed-ink:#93c5fd; --s-completed-mark:#3b82f6; --s-completed-bg:#12294f; --s-completed-line:#2c4f92;
+  --s-cancelled-ink:#fda4af; --s-cancelled-mark:#f43f5e; --s-cancelled-bg:#421222; --s-cancelled-line:#8a2442;
+  --s-away-ink:#c4b5fd;      --s-away-mark:#8b5cf6;      --s-away-bg:#291d52;      --s-away-line:#4f3a94;
+  --s-closed-ink:#9fb3c8;    --s-closed-mark:#64748b;    --s-closed-bg:#1a2739;    --s-closed-line:#33485f;
+  --s-restricted-ink:#fdba74;--s-restricted-mark:#f97316;--s-restricted-bg:#3f230d;--s-restricted-line:#7b4518;
+  --s-weather-ink:#67e8f9;   --s-weather-mark:#06b6d4;   --s-weather-bg:#0b3441;   --s-weather-line:#166578;
+  --field:#0f1e35; --field-focus:#132440;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.34);
+  --shadow-lg:0 12px 28px rgba(0,0,0,.5), 0 40px 72px rgba(0,0,0,.55);
+  --shadow-accent:0 6px 18px rgba(56,189,248,.24);
+  --hatch:rgba(255,255,255,.05);
+  --scrim:rgba(2,8,18,.7);
+}
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{
   width:100%; overflow-x:hidden; min-height:100dvh;
@@ -54,20 +141,22 @@ html,body{
   font-family:var(--font); font-size:16px; line-height:1.45;
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
   -webkit-text-size-adjust:100%;
+  transition:background-color .3s ease, color .3s ease;
 }
+/* A horizon: warm light low on the page, open sky above it. */
 body{
   background-image:
-    radial-gradient(900px 500px at 12% -8%, #10203c 0%, transparent 60%),
-    radial-gradient(700px 420px at 92% 4%, #131a33 0%, transparent 58%);
+    radial-gradient(1100px 620px at 15% -12%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 62%),
+    radial-gradient(820px 460px at 95% 2%,  color-mix(in srgb, var(--s-tentative-mark) 13%, transparent) 0%, transparent 58%),
+    radial-gradient(900px 520px at 50% 108%, color-mix(in srgb, var(--s-away-mark) 10%, transparent) 0%, transparent 60%);
   background-attachment:fixed;
 }
 ::-webkit-scrollbar{width:0;height:0}
-a{color:var(--accent2)}
+a{color:var(--accent-ink)}
 
 /* ── Layout ───────────────────────────────────────────────── */
 .shell{
-  width:100%; max-width:760px; margin:0 auto;
-  padding:var(--s4);
+  width:100%; max-width:760px; margin:0 auto; padding:var(--s4);
   padding-top:calc(var(--s4) + env(safe-area-inset-top));
   padding-left:calc(var(--s4) + env(safe-area-inset-left));
   padding-right:calc(var(--s4) + env(safe-area-inset-right));
@@ -93,10 +182,10 @@ a{color:var(--accent2)}
 .hide{display:none !important}
 
 /* ── Type ─────────────────────────────────────────────────── */
-h1{font-size:21px; font-weight:800; letter-spacing:-.4px}
+h1{font-size:22px; font-weight:800; letter-spacing:-.5px}
 h2{font-size:15px; font-weight:800; letter-spacing:-.2px}
-h3{font-size:13px; font-weight:700}
-.eyebrow{font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--tx3)}
+h3{font-size:13px; font-weight:800}
+.eyebrow{font-size:10px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:var(--tx3)}
 .muted{color:var(--tx3)} .muted2{color:var(--tx2)}
 .mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
 .small{font-size:12px} .tiny{font-size:11px} .xtiny{font-size:10px}
@@ -106,13 +195,12 @@ h3{font-size:13px; font-weight:700}
 
 /* ── Surfaces ─────────────────────────────────────────────── */
 .card{
-  background:linear-gradient(160deg,var(--surface),var(--surface2));
-  border:1px solid var(--line); border-radius:var(--r-lg);
-  padding:var(--s4);
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
+  padding:var(--s4); box-shadow:var(--shadow);
 }
 .card.tight{padding:var(--s3)}
 .card.flush{padding:0; overflow:hidden}
-.panel{background:var(--bg2); border:1px solid var(--line); border-radius:var(--r); padding:var(--s3)}
+.panel{background:var(--surface2); border:1px solid var(--line); border-radius:var(--r); padding:var(--s3)}
 
 /* ── Buttons ──────────────────────────────────────────────── */
 button{font-family:var(--font); cursor:pointer; -webkit-tap-highlight-color:transparent; border:none; background:none; color:inherit}
@@ -120,27 +208,30 @@ button{font-family:var(--font); cursor:pointer; -webkit-tap-highlight-color:tran
   display:inline-flex; align-items:center; justify-content:center; gap:var(--s2);
   min-height:var(--tap); padding:0 var(--s4); border-radius:var(--r);
   font-size:14px; font-weight:700; border:1px solid var(--line2);
-  background:var(--surface2); color:var(--tx); transition:filter .15s, opacity .15s;
+  background:var(--surface); color:var(--tx);
+  transition:transform .12s ease, box-shadow .2s ease, filter .15s ease;
+  box-shadow:0 1px 2px rgba(13,39,68,.05);
 }
-.btn:active{filter:brightness(1.25)}
+.btn:active{transform:translateY(1px)}
 .btn:disabled{opacity:.45; cursor:default}
-.btn.primary{background:linear-gradient(160deg,#2563eb,#1d4ed8); border-color:#1d4ed8; color:#fff; box-shadow:0 6px 20px rgba(37,99,235,.28)}
-.btn.ok{background:linear-gradient(160deg,#12351f,#0d2a18); border-color:#1f7a45; color:#86efac}
-.btn.danger{background:var(--bad-dim); border-color:#7f1d1d; color:#fca5a5}
-.btn.ghost{background:transparent; border-color:var(--line)}
+.btn.primary{background:var(--accent-grad); border-color:transparent; color:#fff; box-shadow:var(--shadow-accent)}
+.btn.ok{background:var(--s-confirmed-bg); border-color:var(--s-confirmed-line); color:var(--s-confirmed-ink)}
+.btn.danger{background:var(--s-cancelled-bg); border-color:var(--s-cancelled-line); color:var(--s-cancelled-ink)}
+.btn.ghost{background:transparent; border-color:var(--line); box-shadow:none}
 .btn.sm{min-height:36px; padding:0 var(--s3); font-size:12px}
 .btn.block{width:100%}
 .icon-btn{
   width:40px; height:40px; min-width:40px; border-radius:var(--r);
   display:inline-flex; align-items:center; justify-content:center;
-  background:rgba(0,0,0,.28); border:1px solid var(--line); color:var(--tx2); font-size:15px;
+  background:var(--surface2); border:1px solid var(--line); color:var(--tx2); font-size:15px;
+  transition:transform .12s ease, background .15s ease;
 }
-.icon-btn:active{filter:brightness(1.4)}
+.icon-btn:active{transform:translateY(1px)}
 
-/* ── Chips / badges ───────────────────────────────────────── */
+/* ── Chips ────────────────────────────────────────────────── */
 .chip{
   display:inline-flex; align-items:center; gap:5px; flex-shrink:0;
-  padding:3px 9px; border-radius:999px; font-size:10px; font-weight:700;
+  padding:3px 9px; border-radius:999px; font-size:10px; font-weight:800;
   letter-spacing:.4px; text-transform:uppercase; white-space:nowrap;
   border:1px solid transparent;
 }
@@ -150,130 +241,151 @@ button{font-family:var(--font); cursor:pointer; -webkit-tap-highlight-color:tran
 /* ── Form controls ────────────────────────────────────────── */
 input,select,textarea{
   width:100%; max-width:100%; box-sizing:border-box;
-  font-family:var(--mono); font-size:16px; /* 16px stops iOS zoom */
+  font-family:var(--mono); font-size:16px;
   min-height:48px; padding:11px 13px;
-  color:var(--tx); background:#0a1121; border:1px solid var(--line2);
-  border-radius:var(--r); outline:none; transition:border-color .15s, background .15s;
+  color:var(--tx); background:var(--field); border:1.5px solid var(--line2);
+  border-radius:var(--r); outline:none; transition:border-color .15s, background .15s, box-shadow .15s;
 }
-input:focus,select:focus,textarea:focus{border-color:var(--accent); background:#0c1424}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--accent); background:var(--field-focus);
+  box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+}
 input::placeholder,textarea::placeholder{color:var(--tx4)}
 select{
   cursor:pointer; appearance:none; -webkit-appearance:none; padding-right:36px;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239fb0c7' d='M6 8.5 1 3.5h10z'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235f7c9c' d='M6 8.5 1 3.5h10z'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 13px center;
 }
 textarea{resize:vertical; min-height:92px; line-height:1.5}
-.label{display:block; font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--tx2); margin-bottom:6px}
+.label{display:block; font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--tx2); margin-bottom:6px}
 .field{margin-bottom:var(--s4)}
-.hint{font-size:11px; color:var(--tx4); margin-top:5px; line-height:1.4}
+.hint{font-size:11px; color:var(--tx3); margin-top:5px; line-height:1.4}
 .seg{display:flex; gap:6px; flex-wrap:wrap}
 .opt{
   display:flex; align-items:center; gap:9px; flex:1; min-width:0;
   padding:11px 13px; min-height:48px;
-  background:#0a1121; border:1px solid var(--line2); border-radius:var(--r);
-  color:var(--tx2); font-size:14px; font-weight:500; text-align:left;
-  user-select:none; -webkit-user-select:none;
+  background:var(--surface2); border:1.5px solid var(--line); border-radius:var(--r);
+  color:var(--tx2); font-size:14px; font-weight:600; text-align:left;
+  user-select:none; -webkit-user-select:none; transition:all .15s ease;
 }
-.opt.on{background:#12244a; border-color:var(--accent); color:#bfdbfe; font-weight:700}
+.opt.on{background:var(--accent-dim); border-color:var(--accent); color:var(--accent-ink); font-weight:800}
 .opt .rc{width:20px; height:20px; border-radius:50%; border:2px solid var(--line2); flex-shrink:0; display:flex; align-items:center; justify-content:center}
 .opt.on .rc{border-color:var(--accent); background:var(--accent)}
 .opt .rc i{width:7px; height:7px; border-radius:50%; background:#fff; display:none}
 .opt.on .rc i{display:block}
 .opt.sq .rc{border-radius:6px}
 
-/* ── Tag picker (exercises) ───────────────────────────────── */
+/* ── Tag picker ───────────────────────────────────────────── */
 .tags{display:flex; flex-wrap:wrap; gap:6px}
 .tag{
-  padding:7px 11px; border-radius:999px; font-size:12px; font-weight:600;
-  background:#0a1121; border:1px solid var(--line2); color:var(--tx2); min-height:36px;
-  display:inline-flex; align-items:center; gap:5px;
+  padding:7px 11px; border-radius:999px; font-size:12px; font-weight:700;
+  background:var(--surface2); border:1.5px solid var(--line); color:var(--tx2); min-height:36px;
+  display:inline-flex; align-items:center; gap:5px; transition:all .15s ease;
 }
-.tag.on{background:var(--accent-dim); border-color:var(--accent); color:#bfdbfe}
+.tag.on{background:var(--accent-dim); border-color:var(--accent); color:var(--accent-ink)}
 
-/* ── Tab bar (bottom, thumb-reachable) ────────────────────── */
+/* ── Tab bar ──────────────────────────────────────────────── */
 .tabbar{
   position:fixed; left:0; right:0; bottom:0; z-index:90;
   display:flex; gap:2px; padding:6px 8px;
   padding-bottom:calc(6px + env(safe-area-inset-bottom));
-  background:rgba(7,11,20,.88); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  background:color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter:blur(18px) saturate(1.4); -webkit-backdrop-filter:blur(18px) saturate(1.4);
   border-top:1px solid var(--line);
 }
 .tabbar .tab{
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
-  min-height:52px; border-radius:var(--r); font-size:10px; font-weight:700;
-  letter-spacing:.3px; color:var(--tx4);
+  min-height:52px; border-radius:var(--r); font-size:10px; font-weight:800;
+  letter-spacing:.3px; color:var(--tx3); transition:all .18s ease;
 }
 .tabbar .tab .ic{font-size:19px; line-height:1}
-.tabbar .tab.on{color:var(--accent2); background:var(--accent-dim)}
+.tabbar .tab.on{color:#fff; background:var(--accent-grad); box-shadow:var(--shadow-accent)}
 
-/* ── Calendar strip + month grid ──────────────────────────── */
-.calstrip{display:flex; gap:6px; overflow-x:auto; padding:0 var(--s4) var(--s2); scroll-snap-type:x proximity}
+/* ── Calendar ─────────────────────────────────────────────── */
+.calstrip{
+  display:flex; gap:7px; overflow-x:auto; padding:0 var(--s4) var(--s3); scroll-snap-type:x proximity;
+  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 32px),transparent 100%);
+  mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 32px),transparent 100%);
+}
 .calstrip .day{scroll-snap-align:center}
 .day{
-  flex-shrink:0; width:62px; min-height:84px; border-radius:var(--r);
+  flex-shrink:0; width:64px; min-height:86px; border-radius:var(--r);
   padding:7px 3px 6px; text-align:center; position:relative; overflow:hidden;
-  border:1px solid var(--line); background:#080e1a;
+  border:1.5px solid var(--line); background:var(--surface);
   display:flex; flex-direction:column; align-items:center; gap:1px;
+  transition:transform .12s ease, box-shadow .2s ease;
+  box-shadow:0 1px 2px rgba(13,39,68,.05);
 }
-@media(min-width:900px){ .day{width:76px; min-height:92px} }
-.day .dow{font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--tx3)}
-.day .dnum{font-family:var(--mono); font-size:19px; font-weight:800; line-height:1.15; color:var(--tx)}
-.day .dmon{font-size:8px; color:var(--tx4); letter-spacing:.5px}
-.day .dtag{font-size:8px; font-weight:700; line-height:1.2; padding:0 2px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.day.today{box-shadow:inset 0 0 0 2px var(--accent)}
-.day .pip{position:absolute; top:4px; right:4px; width:5px; height:5px; border-radius:50%}
-.hatched{background-image:repeating-linear-gradient(135deg,transparent,transparent 3px,rgba(255,255,255,.045) 3px,rgba(255,255,255,.045) 6px)}
+.day:active{transform:scale(.96)}
+@media(min-width:900px){ .day{width:78px; min-height:94px} }
+.day .dow{font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.5px}
+.day .dnum{font-family:var(--mono); font-size:20px; font-weight:800; line-height:1.15}
+.day .dmon{font-size:8px; letter-spacing:.5px}
+.day .dtag{font-size:8px; font-weight:800; line-height:1.2; padding:0 2px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.day.today{box-shadow:0 0 0 2.5px var(--accent), var(--shadow)}
+.hatched{background-image:repeating-linear-gradient(135deg,transparent,transparent 4px,var(--hatch) 4px,var(--hatch) 8px)}
 
-.monthgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px}
-.monthgrid .dow-h{text-align:center; font-size:9px; font-weight:700; color:var(--tx4); text-transform:uppercase; padding-bottom:2px}
+.monthgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
+.monthgrid .dow-h{text-align:center; font-size:9px; font-weight:800; color:var(--tx3); text-transform:uppercase; padding-bottom:2px}
 .monthgrid .cell{
-  aspect-ratio:1; border-radius:10px; border:1px solid var(--line); background:#080e1a;
+  aspect-ratio:1; border-radius:11px; border:1.5px solid var(--line); background:var(--surface);
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
   position:relative; overflow:hidden; font-size:11px;
 }
-.monthgrid .cell.out{opacity:.28}
-.monthgrid .cell .n{font-family:var(--mono); font-size:13px; font-weight:700}
-.monthgrid .cell .m{font-size:8px; font-weight:700}
-.monthgrid .cell.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.monthgrid .cell.out{opacity:.32}
+.monthgrid .cell .n{font-family:var(--mono); font-size:13px; font-weight:800}
+.monthgrid .cell .m{font-size:8px; font-weight:800}
+.monthgrid .cell.today{box-shadow:inset 0 0 0 2.5px var(--accent)}
 
 /* ── Session cards ────────────────────────────────────────── */
 .slist{display:flex; flex-direction:column; gap:var(--s2)}
 .sc{
   border:1px solid var(--line); border-radius:var(--r-lg); padding:var(--s3) var(--s4);
+  padding-left:calc(var(--s4) + 4px);
   display:flex; gap:var(--s3); align-items:flex-start; position:relative; overflow:hidden;
-  background:linear-gradient(160deg,var(--surface),var(--surface2));
+  background:var(--surface); box-shadow:var(--shadow);
+  transition:transform .12s ease, box-shadow .2s ease;
 }
-.sc .bar{position:absolute; left:0; top:0; bottom:0; width:3px}
+.sc:active{transform:scale(.995)}
+.sc .bar{position:absolute; left:0; top:0; bottom:0; width:5px}
 .sc .body{flex:1; min-width:0}
 .sc .acts{display:flex; flex-direction:column; gap:5px; flex-shrink:0}
-.sc.dim{opacity:.55}
-.sc .reg{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:1px}
+.sc.dim{opacity:.62}
+.sc .reg{font-family:var(--mono); font-size:11px; font-weight:800; letter-spacing:1px}
 
 /* ── Filters ──────────────────────────────────────────────── */
-.filters{display:flex; gap:6px; overflow-x:auto; padding-bottom:2px}
+/* Fade the right edge so an overflowing row reads as "scrolls" rather than
+   as a chip that's been chopped in half. */
+.filters{
+  display:flex; gap:6px; overflow-x:auto; padding-bottom:2px;
+  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 28px),transparent 100%);
+  mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 28px),transparent 100%);
+}
 .fbtn{
   flex-shrink:0; min-height:34px; padding:0 13px; border-radius:999px;
-  font-size:11.5px; font-weight:700; border:1px solid var(--line); background:transparent; color:var(--tx3);
+  font-size:11.5px; font-weight:800; border:1.5px solid var(--line);
+  background:var(--surface); color:var(--tx3); transition:all .15s ease;
 }
-.fbtn.on{border-color:var(--accent); background:var(--accent-dim); color:var(--accent2)}
+.fbtn.on{border-color:var(--accent); background:var(--accent-dim); color:var(--accent-ink)}
 
 /* ── Progress bars ────────────────────────────────────────── */
-.bar-t{height:7px; border-radius:6px; background:#16203a; overflow:hidden; margin-top:7px}
-.bar-f{height:100%; border-radius:6px; transition:width .35s ease}
+.bar-t{height:9px; border-radius:999px; background:var(--surface3); overflow:hidden; margin-top:7px}
+.bar-f{height:100%; border-radius:999px; transition:width .45s cubic-bezier(.4,0,.2,1)}
 
-/* ── Tables (logbook) ─────────────────────────────────────── */
-.tw{overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--r); border:1px solid var(--line)}
+/* ── Tables ───────────────────────────────────────────────── */
+.tw{overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--r); border:1px solid var(--line); background:var(--surface)}
 table.lb{border-collapse:collapse; width:100%; min-width:860px; font-size:12px}
-table.lb th,table.lb td{padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap}
+table.lb th,table.lb td{padding:9px 11px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap}
 table.lb th{
   font-size:9px; text-transform:uppercase; letter-spacing:.8px; color:var(--tx3);
-  background:var(--surface); position:sticky; top:0; font-weight:700;
+  background:var(--surface2); position:sticky; top:0; font-weight:800;
 }
+table.lb tbody tr:nth-child(even){background:color-mix(in srgb, var(--surface2) 55%, transparent)}
 table.lb td.n{font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums}
 table.lb tr:last-child td{border-bottom:none}
-table.lb tfoot td{font-weight:800; background:var(--surface); border-top:2px solid var(--line2)}
+table.lb tfoot td{font-weight:800; background:var(--surface3); border-top:2px solid var(--line2)}
 
-/* ── Sheets / overlays ────────────────────────────────────── */
+/* ── Sheets ───────────────────────────────────────────────── */
 .sheet{
   position:fixed; inset:0; z-index:200; display:none; flex-direction:column;
   background:var(--bg); width:100%; max-width:100vw; overflow-x:hidden;
@@ -281,21 +393,21 @@ table.lb tfoot td{font-weight:800; background:var(--surface); border-top:2px sol
 .sheet.open{display:flex}
 .sheet-panel{display:flex; flex-direction:column; flex:1; overflow:hidden; background:var(--bg)}
 @media(min-width:768px){
-  .sheet{background:rgba(2,5,12,.72); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:var(--s4)}
-  .sheet-panel{max-width:620px; width:100%; max-height:88vh; flex:none; border:1px solid var(--line2); border-radius:var(--r-xl); box-shadow:var(--shadow-lg)}
+  .sheet{background:var(--scrim); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:var(--s4)}
+  .sheet-panel{max-width:620px; width:100%; max-height:88vh; flex:none; border:1px solid var(--line); border-radius:var(--r-xl); box-shadow:var(--shadow-lg)}
 }
 .sheet-head{
   display:flex; align-items:center; justify-content:space-between; gap:var(--s2);
   padding:var(--s3) var(--s4); border-bottom:1px solid var(--line); flex-shrink:0;
-  padding-top:max(var(--s3), env(safe-area-inset-top)); background:var(--bg);
+  padding-top:max(var(--s3), env(safe-area-inset-top)); background:var(--surface);
 }
-@media(min-width:768px){ .sheet-head{padding-top:var(--s3); background:var(--surface)} }
+@media(min-width:768px){ .sheet-head{padding-top:var(--s3)} }
 .sheet-body{flex:1; overflow-y:auto; overflow-x:hidden; padding:var(--s4); padding-bottom:max(40px, env(safe-area-inset-bottom)); -webkit-overflow-scrolling:touch}
 
 /* ── Menu ─────────────────────────────────────────────────── */
-.menu{position:absolute; top:100%; right:0; margin-top:6px; z-index:100; min-width:216px;
-  background:var(--surface2); border:1px solid var(--line2); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
-.menu-item{display:flex; align-items:center; gap:10px; padding:13px var(--s4); font-size:14.5px; font-weight:600; width:100%; text-align:left}
+.menu{position:absolute; top:100%; right:0; margin-top:6px; z-index:100; min-width:220px;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--shadow-lg); overflow:hidden}
+.menu-item{display:flex; align-items:center; gap:10px; padding:13px var(--s4); font-size:14.5px; font-weight:700; width:100%; text-align:left}
 .menu-item+.menu-item{border-top:1px solid var(--line)}
 .menu-back{position:fixed; inset:0; z-index:99}
 
@@ -303,45 +415,45 @@ table.lb tfoot td{font-weight:800; background:var(--surface); border-top:2px sol
 .toast{
   position:fixed; left:50%; transform:translateX(-50%);
   bottom:calc(76px + env(safe-area-inset-bottom)); z-index:300;
-  padding:11px 18px; border-radius:999px; font-size:13px; font-weight:600;
-  background:var(--surface3); border:1px solid var(--line2); box-shadow:var(--shadow);
+  padding:11px 18px; border-radius:999px; font-size:13px; font-weight:700;
+  background:var(--surface); color:var(--tx); border:1px solid var(--line); box-shadow:var(--shadow-lg);
   opacity:0; pointer-events:none; transition:opacity .22s, transform .22s; max-width:92vw; text-align:center;
 }
 .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px)}
-.toast.ok{border-color:#1f7a45; color:#86efac}
-.toast.bad{border-color:#7f1d1d; color:#fca5a5}
+.toast.ok{border-color:var(--s-confirmed-line); color:var(--s-confirmed-ink); background:var(--s-confirmed-bg)}
+.toast.bad{border-color:var(--s-cancelled-line); color:var(--s-cancelled-ink); background:var(--s-cancelled-bg)}
 
-/* ── Wind rose / crosswind ────────────────────────────────── */
+/* ── Wind rose ────────────────────────────────────────────── */
 .wx-grid{display:grid; grid-template-columns:1fr; gap:var(--s3)}
 @media(min-width:560px){ .wx-grid{grid-template-columns:auto 1fr; align-items:center} }
-.rose{width:132px; height:132px; margin:0 auto; flex-shrink:0}
+.rose{width:138px; height:138px; margin:0 auto; flex-shrink:0}
 
-/* ── Alert boxes ──────────────────────────────────────────── */
+/* ── Notes ────────────────────────────────────────────────── */
 .note{padding:11px 13px; border-radius:var(--r); font-size:12px; line-height:1.5; border:1px solid}
-.note.info{background:var(--accent-dim); border-color:#2563eb44; color:#bfdbfe}
-.note.warn{background:var(--warn-dim); border-color:#f59e0b44; color:#fcd34d}
-.note.bad{background:var(--bad-dim); border-color:#ef444444; color:#fca5a5}
-.note.ok{background:var(--ok-dim); border-color:#22c55e44; color:#86efac}
+.note.info{background:var(--accent-dim); border-color:color-mix(in srgb, var(--accent) 35%, transparent); color:var(--accent-ink)}
+.note.warn{background:var(--s-tentative-bg); border-color:var(--s-tentative-line); color:var(--s-tentative-ink)}
+.note.bad{background:var(--s-cancelled-bg); border-color:var(--s-cancelled-line); color:var(--s-cancelled-ink)}
+.note.ok{background:var(--s-confirmed-bg); border-color:var(--s-confirmed-line); color:var(--s-confirmed-ink)}
 
 /* ── Empty state ──────────────────────────────────────────── */
-.empty{text-align:center; padding:44px 20px; color:var(--tx4); font-size:13px}
-.empty .ic{font-size:34px; opacity:.4; display:block; margin-bottom:10px}
+.empty{text-align:center; padding:44px 20px; color:var(--tx3); font-size:13px}
+.empty .ic{font-size:38px; opacity:.55; display:block; margin-bottom:10px}
 
-/* ── Details/summary ──────────────────────────────────────── */
+/* ── Details ──────────────────────────────────────────────── */
 details.grp summary{
   cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;
-  padding:11px 2px; font-size:13px; font-weight:700; min-height:44px;
+  padding:11px 2px; font-size:13px; font-weight:800; min-height:44px;
 }
 details.grp summary::-webkit-details-marker{display:none}
-details.grp summary::after{content:'▾'; color:var(--tx4); font-size:11px; transition:transform .2s}
+details.grp summary::after{content:'▾'; color:var(--tx3); font-size:11px; transition:transform .2s}
 details.grp[open] summary::after{transform:rotate(180deg)}
-.exrow{display:flex; align-items:center; justify-content:space-between; gap:var(--s2); padding:8px 10px; border-radius:9px; font-size:12px; margin-bottom:4px; border:1px solid var(--line); background:#0a1121}
-.exrow.done{background:#062916aa; border-color:#22c55e44}
-.tick{width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; flex-shrink:0; border:1px solid var(--line2)}
-.tick.on{background:var(--ok); border-color:var(--ok); color:#052e16}
+.exrow{display:flex; align-items:center; justify-content:space-between; gap:var(--s2); padding:9px 11px; border-radius:10px; font-size:12px; margin-bottom:5px; border:1px solid var(--line); background:var(--surface2)}
+.exrow.done{background:var(--s-confirmed-bg); border-color:var(--s-confirmed-line)}
+.tick{width:19px; height:19px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; flex-shrink:0; border:1.5px solid var(--line2)}
+.tick.on{background:var(--s-confirmed-mark); border-color:var(--s-confirmed-mark); color:#fff}
 
 /* ═══════════════════════════════════════════════════════════
-   PRINT — solo kneeboard card
+   PRINT — solo kneeboard card (always light, always ink on paper)
    ═══════════════════════════════════════════════════════════ */
 #printcard{display:none}
 @media print{
@@ -350,10 +462,7 @@ details.grp[open] summary::after{transform:rotate(180deg)}
   .shell,.tabbar,.sheet,.toast{display:none !important}
   #printcard{display:block !important}
 }
-.kb{
-  width:100%; color:#000; background:#fff; font-family:'Outfit',sans-serif;
-  display:grid; grid-template-columns:1fr 1fr; gap:6mm;
-}
+.kb{width:100%; color:#000; background:#fff; font-family:'Outfit',sans-serif; display:grid; grid-template-columns:1fr 1fr; gap:6mm}
 .kb .card2{border:1px solid #000; padding:0; break-inside:avoid}
 .kb table{border-collapse:collapse; width:100%; font-size:8.5pt}
 .kb td,.kb th{border:1px solid #000; padding:2mm 2.2mm; vertical-align:top}
@@ -368,6 +477,8 @@ details.grp[open] summary::after{transform:rotate(180deg)}
 .kb .script{font-style:italic; font-size:9pt; line-height:1.5}
 .kb .fuel td{font-size:7.5pt; padding:1mm 2mm; text-align:center}
 .kb .fuel td:first-child{text-align:left}
+
+@media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important} }
 </style>
 </head>
 <body>
@@ -392,7 +503,7 @@ details.grp[open] summary::after{transform:rotate(180deg)}
 
 /* ═══ 1. CONFIG & CONSTANTS ══════════════════════════════════════════════ */
 
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.1.0";
 const LOCAL_KEY   = "flightlog.v2";
 const LEGACY_KEY  = "flight-log-v1";
 
@@ -493,12 +604,23 @@ const KINDS = {
   away:    { label:"Away",          icon:"🏖", colour:"var(--violet)" },
   weather: { label:"Poor Weather",  icon:"⛈", colour:"var(--slate)" },
 };
+/* Status colours reference CSS custom properties rather than literal hex, so
+   light and dark are one definition each in the stylesheet instead of two
+   sets of hardcoded values scattered through the render functions.
+     ink  = text on the tint      mark = saturated fill (bars, dots)
+     bg   = the tint              line = border on the tint              */
 const STATUSES = [
-  { v:"tentative", l:"Tentative", c:"#f59e0b", bg:"#2a1d05", ms:"tentative" },
-  { v:"confirmed", l:"Confirmed", c:"#22c55e", bg:"#062916", ms:"busy" },
-  { v:"completed", l:"Completed", c:"#3b82f6", bg:"#0f2038", ms:"busy" },
-  { v:"cancelled", l:"Cancelled", c:"#ef4444", bg:"#2c0b0b", ms:"free" },
+  { v:"tentative", l:"Tentative", ink:"var(--s-tentative-ink)", mark:"var(--s-tentative-mark)", bg:"var(--s-tentative-bg)", line:"var(--s-tentative-line)" },
+  { v:"confirmed", l:"Confirmed", ink:"var(--s-confirmed-ink)", mark:"var(--s-confirmed-mark)", bg:"var(--s-confirmed-bg)", line:"var(--s-confirmed-line)" },
+  { v:"completed", l:"Completed", ink:"var(--s-completed-ink)", mark:"var(--s-completed-mark)", bg:"var(--s-completed-bg)", line:"var(--s-completed-line)" },
+  { v:"cancelled", l:"Cancelled", ink:"var(--s-cancelled-ink)", mark:"var(--s-cancelled-mark)", bg:"var(--s-cancelled-bg)", line:"var(--s-cancelled-line)" },
 ];
+const TOK = {
+  away:      { ink:"var(--s-away-ink)",      mark:"var(--s-away-mark)",      bg:"var(--s-away-bg)",      line:"var(--s-away-line)" },
+  closed:    { ink:"var(--s-closed-ink)",    mark:"var(--s-closed-mark)",    bg:"var(--s-closed-bg)",    line:"var(--s-closed-line)" },
+  restricted:{ ink:"var(--s-restricted-ink)",mark:"var(--s-restricted-mark)",bg:"var(--s-restricted-bg)",line:"var(--s-restricted-line)" },
+  weather:   { ink:"var(--s-weather-ink)",   mark:"var(--s-weather-mark)",   bg:"var(--s-weather-bg)",   line:"var(--s-weather-line)" },
+};
 const STATUS_CYCLE = ["tentative","confirmed","completed","cancelled"];
 const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -1403,9 +1525,10 @@ function assess(w, soloLimits) {
 }
 
 function verdictChip(v) {
-  if (v === "go")       return `<span class="chip lg" style="color:#86efac;background:var(--ok-dim);border-color:#22c55e55">● Looks flyable</span>`;
-  if (v === "marginal") return `<span class="chip lg" style="color:#fcd34d;background:var(--warn-dim);border-color:#f59e0b55">● Marginal</span>`;
-  return `<span class="chip lg" style="color:#fca5a5;background:var(--bad-dim);border-color:#ef444455">● Outside limits</span>`;
+  /* Icon + words as well as colour — never state by colour alone. */
+  if (v === "go")       return `<span class="chip lg" style="color:var(--s-confirmed-ink);background:var(--s-confirmed-bg);border-color:var(--s-confirmed-line)">✓ Looks flyable</span>`;
+  if (v === "marginal") return `<span class="chip lg" style="color:var(--s-tentative-ink);background:var(--s-tentative-bg);border-color:var(--s-tentative-line)">! Marginal</span>`;
+  return `<span class="chip lg" style="color:var(--s-cancelled-ink);background:var(--s-cancelled-bg);border-color:var(--s-cancelled-line)">✕ Outside limits</span>`;
 }
 
 /* Wind rose showing both runway directions and the wind arrow. */
@@ -1419,14 +1542,14 @@ function windRose(windDirTrue, windKt, comps) {
   let rwLines = "";
   state.settings.base.runways.forEach(r => {
     const [x1, y1] = pt(r.hdg, R - 6), [x2, y2] = pt(r.hdg + 180, R - 6);
-    rwLines += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#334966" stroke-width="9" stroke-linecap="round"/>`;
+    rwLines += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--line2)" stroke-width="10" stroke-linecap="round"/>`;
   });
   const best = bestRunway(comps || []);
   if (best) {
     const rr = state.settings.base.runways.find(r => r.id === best.rwy);
     if (rr) {
       const [x1, y1] = pt(rr.hdg + 180, R - 6), [x2, y2] = pt(rr.hdg, R - 6);
-      rwLines += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#22c55e" stroke-width="9" stroke-linecap="round" opacity=".85"/>`;
+      rwLines += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--s-confirmed-mark)" stroke-width="10" stroke-linecap="round"/>`;
     }
   }
   let arrow = "";
@@ -1434,21 +1557,24 @@ function windRose(windDirTrue, windKt, comps) {
     /* Wind direction is where it blows FROM; the arrow flies with the wind. */
     const [tx, ty] = pt(magDir + 180, R - 20);
     const [hx, hy] = pt(magDir, R + 4);
-    arrow = `<line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${tx.toFixed(1)}" y2="${ty.toFixed(1)}" stroke="#f59e0b" stroke-width="3"/>
-             <circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="4.5" fill="#f59e0b"/>`;
+    /* 2px surface ring so the arrow stays legible where it crosses a runway. */
+    arrow = `<line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${tx.toFixed(1)}" y2="${ty.toFixed(1)}" stroke="var(--surface)" stroke-width="6" stroke-linecap="round"/>
+             <line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${tx.toFixed(1)}" y2="${ty.toFixed(1)}" stroke="var(--s-restricted-mark)" stroke-width="3" stroke-linecap="round"/>
+             <circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="5" fill="var(--s-restricted-mark)" stroke="var(--surface)" stroke-width="2"/>`;
   }
   return `<svg class="rose" viewBox="0 0 ${size} ${size}" aria-hidden="true">
-    <circle cx="${c}" cy="${c}" r="${R}" fill="#0a1121" stroke="#1e293b"/>
+    <circle cx="${c}" cy="${c}" r="${R}" fill="var(--surface2)" stroke="var(--line)"/>
     ${[0,90,180,270].map(d => { const [x,y] = pt(d, R + 9);
-      return `<text x="${x.toFixed(1)}" y="${(y+3).toFixed(1)}" fill="#4a5b73" font-size="8" font-family="monospace" text-anchor="middle">${["N","E","S","W"][d/90]}</text>`;
+      return `<text x="${x.toFixed(1)}" y="${(y+3).toFixed(1)}" fill="var(--tx4)" font-size="8" font-family="monospace" text-anchor="middle">${["N","E","S","W"][d/90]}</text>`;
     }).join("")}
     ${rwLines}
-    ${state.settings.base.runways.map(r => { const [x,y] = pt(r.hdg, R - 22);
-      return `<text x="${x.toFixed(1)}" y="${(y+3).toFixed(1)}" fill="#cbd5e1" font-size="9" font-weight="700" font-family="monospace" text-anchor="middle">${esc(r.id)}</text>`;
+    ${state.settings.base.runways.map(r => { const [x,y] = pt(r.hdg, R - 23);
+      return `<text x="${x.toFixed(1)}" y="${(y+3).toFixed(1)}" fill="var(--tx2)" font-size="9" font-weight="700" font-family="monospace" text-anchor="middle">${esc(r.id)}</text>`;
     }).join("")}
     ${arrow}
-    <text x="${c}" y="${c+4}" fill="#e8eef7" font-size="12" font-weight="700" font-family="monospace" text-anchor="middle">${windKt == null ? "--" : Math.round(windKt)}</text>
-    <text x="${c}" y="${c+14}" fill="#4a5b73" font-size="7" text-anchor="middle">KT</text>
+    <circle cx="${c}" cy="${c}" r="17" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="${c}" y="${c+3}" fill="var(--tx)" font-size="13" font-weight="800" font-family="monospace" text-anchor="middle">${windKt == null ? "--" : Math.round(windKt)}</text>
+    <text x="${c}" y="${c+13}" fill="var(--tx4)" font-size="7" text-anchor="middle">KT</text>
   </svg>`;
 }
 
@@ -1519,6 +1645,7 @@ function renderHeader() {
       </div>
     </div>
     <div class="row" style="gap:6px">
+      <button class="icon-btn" onclick="cycleTheme()" title="Theme: ${esc(themeLabel())}">${themeIcon()}</button>
       <button class="icon-btn" onclick="openSettings()" title="Settings">⚙</button>
       <div style="position:relative">
         <button class="btn primary" onclick="toggleAddMenu()">+ New</button>
@@ -1528,9 +1655,9 @@ function renderHeader() {
             <button class="menu-item" onclick="openEntry(null,'flight')"><span>✈</span> Flying lesson</button>
             <button class="menu-item" onclick="openEntry(null,'ground')"><span>📖</span> Ground school</button>
             <button class="menu-item" onclick="openEntry(null,'exam')"><span>📝</span> Exam / test</button>
-            <button class="menu-item" style="color:var(--bad)" onclick="openEntry(null,'closure')"><span>🚫</span> Airfield closed</button>
-            <button class="menu-item" style="color:var(--violet)" onclick="openEntry(null,'away')"><span>🏖</span> Away / holiday</button>
-            <button class="menu-item" style="color:var(--slate)" onclick="openEntry(null,'weather')"><span>⛈</span> Poor weather</button>
+            <button class="menu-item" style="color:var(--bad-ink)" onclick="openEntry(null,'closure')"><span>🚫</span> Airfield closed</button>
+            <button class="menu-item" style="color:var(--violet-ink)" onclick="openEntry(null,'away')"><span>🏖</span> Away / holiday</button>
+            <button class="menu-item" style="color:var(--slate-ink)" onclick="openEntry(null,'weather')"><span>⛈</span> Poor weather</button>
           </div>
         </div>
       </div>
@@ -1545,7 +1672,7 @@ function renderSignedOut() {
       <div style="font-size:54px;margin-bottom:10px">✈</div>
       <h1 style="margin-bottom:8px">Flight Log</h1>
       <p class="small muted mb4" style="max-width:300px">Your NPPL(M) training diary, logbook and lesson planner.</p>
-      <button class="btn" style="background:#fff;color:#0b1120;border:none;font-size:15px;padding:0 22px;min-height:50px" onclick="signInGoogle()">
+      <button class="btn" style="background:var(--surface);color:var(--tx);border:1.5px solid var(--line2);font-size:15px;padding:0 22px;min-height:52px;box-shadow:var(--shadow)" onclick="signInGoogle()">
         <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
         Sign in with Google
       </button>
@@ -1564,32 +1691,41 @@ function dayVisual(dateStr) {
   const baseState = baseClosedOn(dateStr);
   const lead = lessons.sort((a,b) => (a.start || "") < (b.start || "") ? -1 : 1)[0];
 
-  let v = { bg:"#080e1a", border:"var(--line)", num:"var(--tx2)", dow:"var(--tx3)", mon:"var(--tx4)",
-            tag:"", tagColour:"var(--tx3)", hatch:false, lessons, cancelled, entry:lead || closure || away || wxBlock || cancelled[0] || null };
+  /* Default: a plain, quiet day. Anything with something on it gets the
+     status tint, so the strip reads as colour-on-white rather than a wall
+     of dark boxes. A booked lesson is the loudest thing on the screen —
+     that's the bit you actually want to see. */
+  const v = { bg:"var(--surface)", border:"var(--line)", num:"var(--tx)", dow:"var(--tx3)", mon:"var(--tx4)",
+              tag:"", tagColour:"var(--tx3)", hatch:false, lessons, cancelled,
+              entry: lead || closure || away || wxBlock || cancelled[0] || null };
+
+  const paint = (t, opts) => Object.assign(v, {
+    bg: t.bg, border: t.line, num: t.ink, dow: t.ink, mon: t.ink, tagColour: t.ink
+  }, opts || {});
 
   if (lead) {
     const s = statusOf(lead.status);
-    v.bg = s.bg; v.border = s.c + "88"; v.num = "#fff"; v.dow = s.c; v.mon = s.c + "cc";
-    v.tag = fmtTime(lead.start) || s.l; v.tagColour = s.c;
+    paint(s);
+    v.tag = fmtTime(lead.start) || s.l;
     if (lessons.length > 1) v.tag += " +" + (lessons.length - 1);
   } else if (away) {
-    v.bg = "var(--violet-dim)"; v.border = "#7c3aed88"; v.num = "#ddd6fe"; v.dow = "#c4b5fd"; v.mon = "#8b5cf6";
-    v.tag = (away.notes || "Away").slice(0, 9); v.tagColour = "#c4b5fd"; v.hatch = true;
+    paint(TOK.away, { hatch:true });
+    v.tag = (away.notes || "Away").slice(0, 9);
   } else if (closure) {
-    v.bg = "#0c0c0f"; v.border = "#374151"; v.num = "#9ca3af"; v.dow = "#6b7280"; v.mon = "#4b5563";
-    v.tag = (closure.notes || "Closed").slice(0, 9); v.tagColour = "#9ca3af"; v.hatch = true;
+    paint(TOK.closed, { hatch:true });
+    v.tag = (closure.notes || "Closed").slice(0, 9);
   } else if (wxBlock) {
-    v.bg = "var(--slate-dim)"; v.border = "#47556988"; v.num = "#cbd5e1"; v.dow = "#94a3b8"; v.mon = "#64748b";
-    v.tag = "⛈"; v.tagColour = "#94a3b8"; v.hatch = true;
+    paint(TOK.weather, { hatch:true });
+    v.tag = "⛈";
   } else if (cancelled.length) {
-    v.bg = "var(--bad-dim)"; v.border = "#7f1d1d"; v.num = "#fca5a5"; v.dow = "#f87171"; v.mon = "#991b1b";
-    v.tag = "Cancelled"; v.tagColour = "#fca5a5";
+    paint(statusOf("cancelled"));
+    v.tag = "Cancelled";
   } else if (baseState === "closed") {
-    v.bg = "#0c0c0f"; v.border = "#2b2b33"; v.num = "#6b7280"; v.dow = "#4b5563"; v.mon = "#3f4654";
-    v.tag = "Closed"; v.tagColour = "#6b7280"; v.hatch = true;
+    paint(TOK.closed, { hatch:true });
+    v.tag = "Closed";
   } else if (baseState === "restricted") {
-    v.bg = "#170d02"; v.border = "#7c3d0f"; v.num = "#fdba74"; v.dow = "#fb923c"; v.mon = "#9a3412";
-    v.tag = "Restr."; v.tagColour = "#fb923c"; v.hatch = true;
+    paint(TOK.restricted, { hatch:true });
+    v.tag = "Restr.";
   }
   return v;
 }
@@ -1656,11 +1792,12 @@ function entryCard(e) {
   const staleCal = exported && e.calExportedAt && e.updatedAt > e.calExportedAt;
 
   if (isBlocking(e)) {
-    const colour = e.kind === "away" ? "var(--violet)" : e.kind === "closure" ? "var(--bad)" : "var(--slate)";
+    const tk = e.kind === "away" ? TOK.away : e.kind === "closure" ? TOK.closed : TOK.weather;
+    const colour = tk.ink;
     const range = e.kind === "away" && e.dateEnd && e.dateEnd !== e.date
       ? fmtDateShort(e.date) + " → " + fmtDateShort(e.dateEnd) : fmtDateLong(e.date);
     return `<div class="sc" onclick="openEntry('${escJs(e.id)}')">
-      <span class="bar" style="background:${colour}"></span>
+      <span class="bar" style="background:${tk.mark}"></span>
       <div class="body">
         <div class="tiny mono" style="color:${colour}">${esc(range)}</div>
         <div class="mt2" style="font-weight:700;color:${colour}">${k.icon} ${esc(k.label)}</div>
@@ -1676,13 +1813,13 @@ function entryCard(e) {
   const a = wx ? assess(wx, soloPlanned) : null;
 
   return `<div class="sc ${e.status === "cancelled" ? "dim" : ""}" onclick="openEntry('${escJs(e.id)}')">
-    <span class="bar" style="background:${s.c}"></span>
+    <span class="bar" style="background:${s.mark}"></span>
     <div class="body">
       <div class="row mb2" style="gap:7px;flex-wrap:wrap">
-        <span class="tiny mono" style="color:${s.c}">${esc(fmtDateLong(e.date))}</span>
+        <span class="tiny mono" style="color:${s.ink}">${esc(fmtDateLong(e.date))}</span>
         ${e.start ? `<span class="tiny mono muted">${esc(w.start)}–${esc(w.end)}</span>` : ""}
-        <span class="chip" style="color:${s.c};background:${s.bg};border-color:${s.c}44"><span class="dot" style="background:${s.c}"></span>${s.l}</span>
-        ${staleCal ? `<span class="chip" style="color:var(--warn);background:var(--warn-dim);border-color:#f59e0b44" title="Changed since you added it — update the event in your calendar">📅 changed</span>`
+        <span class="chip" style="color:${s.ink};background:${s.bg};border-color:${s.line}"><span class="dot" style="background:${s.mark}"></span>${s.l}</span>
+        ${staleCal ? `<span class="chip" style="color:var(--s-tentative-ink);background:var(--s-tentative-bg);border-color:var(--s-tentative-line)" title="Changed since you added it — update the event in your calendar">📅 changed</span>`
           : exported ? `<span class="chip" style="color:var(--tx3);border-color:var(--line)" title="Added to your calendar">📅</span>` : ""}
         ${e.kind === "exam" && e.status === "completed" ? resultChip(e.examResult) : ""}
       </div>
@@ -1695,8 +1832,8 @@ function entryCard(e) {
       <div class="row tiny muted mt2" style="gap:12px;flex-wrap:wrap">
         ${e.instructor ? `<span>👤 ${esc(e.instructor)}</span>` : ""}
         ${e.aircraftReg ? `<span class="mono">${esc(e.aircraftReg)}</span>` : ""}
-        ${flown ? `<span style="color:${s.c};font-weight:700">${hhmm(recTotalMins(e.rec))} logged</span>` : ""}
-        ${flown && recP1Mins(e.rec) > 0 ? `<span style="color:var(--violet)">P1 ${hhmm(recP1Mins(e.rec))}</span>` : ""}
+        ${flown ? `<span style="color:${s.ink};font-weight:800">${hhmm(recTotalMins(e.rec))} logged</span>` : ""}
+        ${flown && recP1Mins(e.rec) > 0 ? `<span style="color:var(--violet-ink)">P1 ${hhmm(recP1Mins(e.rec))}</span>` : ""}
         ${flown && e.rec.landings ? `<span>${esc(e.rec.landings)} ldg</span>` : ""}
       </div>
       ${a ? `<div class="row mt3" style="gap:7px;flex-wrap:wrap">
@@ -1710,7 +1847,7 @@ function entryCard(e) {
     <div class="acts">
       <button class="icon-btn" title="Advance status" onclick="event.stopPropagation();cycleStatus('${escJs(e.id)}')">⟳</button>
       <button class="icon-btn" title="Calendar" onclick="event.stopPropagation();calendarAction('${escJs(e.id)}')">📅</button>
-      <button class="icon-btn" style="color:var(--bad)" onclick="event.stopPropagation();deleteEntry('${escJs(e.id)}')">✕</button>
+      <button class="icon-btn" style="color:var(--bad-ink)" onclick="event.stopPropagation();deleteEntry('${escJs(e.id)}')">✕</button>
     </div>
   </div>`;
 }
@@ -1726,8 +1863,8 @@ function entryTitle(e) {
   return e.kind === "ground" ? "Ground school" : "Flying lesson";
 }
 function resultChip(r) {
-  if (r === "pass") return `<span class="chip" style="color:#86efac;background:var(--ok-dim);border-color:#22c55e44">✓ Pass</span>`;
-  if (r === "fail") return `<span class="chip" style="color:#fca5a5;background:var(--bad-dim);border-color:#ef444444">✕ Fail</span>`;
+  if (r === "pass") return `<span class="chip" style="color:var(--s-confirmed-ink);background:var(--s-confirmed-bg);border-color:var(--s-confirmed-line)">✓ Pass</span>`;
+  if (r === "fail") return `<span class="chip" style="color:var(--s-cancelled-ink);background:var(--s-cancelled-bg);border-color:var(--s-cancelled-line)">✕ Fail</span>`;
   return `<span class="chip" style="color:var(--tx3);border-color:var(--line)">Pending</span>`;
 }
 
@@ -1764,9 +1901,9 @@ function renderSchedule() {
     </div>
     ${state.ui.calMode === "strip" ? renderCalStrip() : `<div style="padding:0 var(--s4) var(--s4)">${renderMonthGrid()}</div>`}
     <div class="row tiny" style="gap:11px;padding:0 var(--s4) var(--s3);flex-wrap:wrap">
-      ${STATUSES.map(s => `<span style="color:${s.c}">● ${s.l}</span>`).join("")}
-      <span style="color:var(--violet)">● Away</span>
-      <span style="color:#6b7280">● Closed</span>
+      ${STATUSES.map(s => `<span style="color:${s.ink};font-weight:700"><span style="color:${s.mark}">●</span> ${s.l}</span>`).join("")}
+      <span style="color:${TOK.away.ink};font-weight:700"><span style="color:${TOK.away.mark}">●</span> Away</span>
+      <span style="color:${TOK.closed.ink};font-weight:700"><span style="color:${TOK.closed.mark}">●</span> Closed</span>
     </div>
   </div>
 
@@ -1790,9 +1927,9 @@ function renderSchedule() {
         </div>`}
 
       <div class="g3">
-        ${statTile("Hours", hhmm(t.totalMins), "var(--accent2)")}
-        ${statTile("Solo", hhmm(t.p1Mins), "var(--violet)")}
-        ${statTile("Landings", String(t.landings), "var(--ok)")}
+        ${statTile("Hours", hhmm(t.totalMins), "var(--accent-ink)")}
+        ${statTile("Solo", hhmm(t.p1Mins), "var(--violet-ink)")}
+        ${statTile("Landings", String(t.landings), "var(--ok-ink)")}
       </div>
 
       ${up ? `
@@ -1801,7 +1938,7 @@ function renderSchedule() {
           <div style="font-weight:700">Ex ${esc(up.ex.ref)} — ${esc(up.ex.name)}</div>
           <div class="tiny muted mt2">${esc(up.phase.label)}</div>
         </div>` : `
-        <div class="card tight"><div class="eyebrow mb2">Syllabus</div><div class="small" style="color:var(--ok)">Every exercise covered.</div></div>`}
+        <div class="card tight"><div class="eyebrow mb2">Syllabus</div><div class="small" style="color:var(--ok-ink)">Every exercise covered.</div></div>`}
     </div>
 
     <div class="main">
@@ -1849,14 +1986,14 @@ function renderLogbook() {
     <div class="row-b mb3"><h2>Totals</h2><button class="btn sm ghost" onclick="exportCSV()">Export CSV</button></div>
     <div class="g4">
       ${statTile("Total time", hhmm(t.totalMins), "var(--tx)")}
-      ${statTile("Dual", hhmm(t.dualMins), "var(--accent2)")}
-      ${statTile("P1 / solo", hhmm(t.p1Mins), "var(--violet)")}
-      ${statTile("Landings", String(t.landings), "var(--ok)")}
+      ${statTile("Dual", hhmm(t.dualMins), "var(--accent-ink)")}
+      ${statTile("P1 / solo", hhmm(t.p1Mins), "var(--violet-ink)")}
+      ${statTile("Landings", String(t.landings), "var(--ok-ink)")}
     </div>
     <div class="g3 mt2">
       ${statTile("Flights", String(t.flights), "var(--tx2)")}
-      ${statTile("Solo XC", hhmm(t.soloXCMins), "var(--ok)")}
-      ${statTile("Longest XC", longestXC() ? longestXC() + " nm" : "—", "var(--warn)")}
+      ${statTile("Solo XC", hhmm(t.soloXCMins), "var(--ok-ink)")}
+      ${statTile("Longest XC", longestXC() ? longestXC() + " nm" : "—", "var(--warn-ink)")}
     </div>
     ${t.unallocatedMins > 0 ? `<div class="note info mt3 tiny">
       ${hhmm(t.unallocatedMins)} of logged time has no dual/P1 split and is counted as dual. Open those flights and fill in the columns to be exact.</div>` : ""}
@@ -1885,7 +2022,7 @@ function renderLogbook() {
             <td class="mono">${esc(r.offBlocks || "—")}</td><td class="mono">${esc(r.onBlocks || "—")}</td>
             <td class="n">${hhmm(recTotalMins(r))}</td>
             <td class="n">${recDualMins(r) ? hhmm(recDualMins(r)) : ""}</td>
-            <td class="n" style="color:var(--violet)">${recP1Mins(r) ? hhmm(recP1Mins(r)) : ""}</td>
+            <td class="n" style="color:var(--violet-ink)">${recP1Mins(r) ? hhmm(recP1Mins(r)) : ""}</td>
             <td class="n">${esc(r.landings || "")}</td>
             <td class="tiny">${esc(exs.join(", "))}</td>
             <td class="tiny muted" style="max-width:220px;overflow:hidden;text-overflow:ellipsis">${esc(r.remarks || e.notes || "")}</td>
@@ -1910,14 +2047,18 @@ function renderProgress() {
   const exams = examState(), miles = milestoneState();
   const doneEx = phases.reduce((a,p) => a + p.done, 0), totEx = phases.reduce((a,p) => a + p.total, 0);
 
-  const bar = (label, mins, targetH, colour) => {
+  /* Two steps per bar: the readable ink for the figure, the saturated mark for
+     the fill. Using one value for both makes either the text too pale or the
+     bar too dull. */
+  const bar = (label, mins, targetH, ink, mark) => {
     const h = mins / 60, pct = targetH > 0 ? Math.min(100, h / targetH * 100) : 0;
+    const done = pct >= 100;
     return `<div class="panel mb2">
       <div class="row-b" style="align-items:baseline">
-        <span class="eyebrow">${esc(label)}</span>
-        <span class="mono small" style="color:${colour}">${hhmm(mins)}<span class="muted"> / ${targetH}:00</span></span>
+        <span class="eyebrow">${esc(label)}${done ? " ✓" : ""}</span>
+        <span class="mono small" style="color:${ink};font-weight:700">${hhmm(mins)}<span class="muted" style="font-weight:400"> / ${targetH}:00</span></span>
       </div>
-      <div class="bar-t"><div class="bar-f" style="width:${pct}%;background:${colour}"></div></div>
+      <div class="bar-t"><div class="bar-f" style="width:${pct}%;background:linear-gradient(90deg, color-mix(in srgb, ${mark} 70%, white), ${mark})"></div></div>
     </div>`;
   };
 
@@ -1925,16 +2066,16 @@ function renderProgress() {
   <div class="note info mb3">Targets default to commonly published NPPL(M) minimums. Confirm the current figures against CAP 804 and your school, then adjust them in Settings.</div>
 
   <div class="row-b mb3"><h2>Flight hours</h2><button class="icon-btn" onclick="openSettings('targets')">⚙</button></div>
-  ${bar("Total flight time", t.totalMins, T.totalHours, "var(--accent2)")}
-  ${bar("Solo (P1)", t.p1Mins, T.soloHours, "var(--violet)")}
-  ${bar("Solo cross-country", t.soloXCMins, T.soloXCHours, "var(--ok)")}
+  ${bar("Total flight time", t.totalMins, T.totalHours, "var(--accent-ink)", "var(--accent)")}
+  ${bar("Solo (P1)", t.p1Mins, T.soloHours, "var(--violet-ink)", "var(--s-away-mark)")}
+  ${bar("Solo cross-country", t.soloXCMins, T.soloXCHours, "var(--ok-ink)", "var(--s-confirmed-mark)")}
 
   <div class="card tight mb4 row-b" style="gap:10px">
     <div style="min-width:0">
       <div class="eyebrow">Qualifying cross-country</div>
       <div class="tiny muted mt2">≥ ${T.qualifyingXCNm} nm with full-stop landings away from base. Longest flown: ${longestXC() || 0} nm.</div>
     </div>
-    ${hasQualifyingXC() ? `<span class="chip lg" style="color:#86efac;background:var(--ok-dim);border-color:#22c55e44">✓ Done</span>`
+    ${hasQualifyingXC() ? `<span class="chip lg" style="color:var(--s-confirmed-ink);background:var(--s-confirmed-bg);border-color:var(--s-confirmed-line)">✓ Done</span>`
                         : `<span class="chip lg" style="color:var(--tx3);border-color:var(--line)">Not yet</span>`}
   </div>
 
@@ -1943,7 +2084,7 @@ function renderProgress() {
     ${exams.map(x => `<div class="row-b">
       <span class="small">${esc(x.name)}${x.date ? ` <span class="tiny muted mono">${esc(x.date)}</span>` : ""}</span>
       ${x.passed ? resultChip("pass") : x.failed ? resultChip("fail")
-        : x.booked ? `<span class="chip" style="color:var(--warn);border-color:#f59e0b44">Booked</span>` : resultChip("pending")}
+        : x.booked ? `<span class="chip" style="color:var(--s-tentative-ink);background:var(--s-tentative-bg);border-color:var(--s-tentative-line)">Booked</span>` : resultChip("pending")}
     </div>`).join("")}
   </div>
 
@@ -1962,10 +2103,10 @@ function renderProgress() {
         <summary><span>${esc(p.label)}</span><span class="mono muted">${p.done}/${p.total}</span></summary>
         <div style="padding-bottom:8px">
           ${p.items.map(i => `<div class="exrow ${i.count ? "done" : ""}">
-            <span style="color:${i.count ? "#86efac" : "var(--tx2)"}">Ex ${esc(i.ex.ref)} — ${esc(i.ex.name)}</span>
+            <span style="color:${i.count ? "var(--s-confirmed-ink)" : "var(--tx2)"};font-weight:${i.count ? 700 : 500}">Ex ${esc(i.ex.ref)} — ${esc(i.ex.name)}</span>
             <span class="row" style="gap:7px">
               ${i.count > 1 ? `<span class="tiny muted mono">×${i.count}</span>` : ""}
-              ${i.soloDone ? `<span class="tiny" style="color:var(--violet)">solo</span>` : ""}
+              ${i.soloDone ? `<span class="tiny" style="color:var(--violet-ink)">solo</span>` : ""}
               <span class="tick ${i.count ? "on" : ""}">${i.count ? "✓" : ""}</span>
             </span>
           </div>`).join("")}
@@ -2052,13 +2193,13 @@ function planSlotCard(e) {
             return `<div class="row-b" style="padding:5px 0;border-bottom:1px solid var(--line)">
               <span class="mono small">RWY ${esc(c.rwy)} <span class="muted tiny">${esc(c.circuit)}</span></span>
               <span class="mono tiny" style="text-align:right">
-                <span style="color:${c.tail ? "var(--bad)" : "var(--ok)"}">${c.tail ? "tail" : "head"} ${Math.abs(c.head).toFixed(1)}</span> ·
-                <span style="color:${c.cross > a.maxCross ? "var(--bad)" : c.cross > a.maxCross * 0.7 ? "var(--warn)" : "var(--tx2)"}">xw ${c.cross.toFixed(1)} from ${c.fromLeft ? "L" : "R"}</span>
-                ${g && g.cross > c.cross + 0.5 ? `<br><span style="color:${g.cross > a.maxCross ? "var(--bad)" : "var(--warn)"}">in gusts ${g.cross.toFixed(1)} kt</span>` : ""}
+                <span style="color:${c.tail ? "var(--bad-ink)" : "var(--ok-ink)"}">${c.tail ? "tail" : "head"} ${Math.abs(c.head).toFixed(1)}</span> ·
+                <span style="color:${c.cross > a.maxCross ? "var(--bad-ink)" : c.cross > a.maxCross * 0.7 ? "var(--warn-ink)" : "var(--tx2)"}">xw ${c.cross.toFixed(1)} from ${c.fromLeft ? "L" : "R"}</span>
+                ${g && g.cross > c.cross + 0.5 ? `<br><span style="color:${g.cross > a.maxCross ? "var(--bad-ink)" : "var(--warn-ink)"}">in gusts ${g.cross.toFixed(1)} kt</span>` : ""}
               </span>
             </div>`;
           }).join("")}
-          ${a.best ? `<div class="tiny mt2" style="color:var(--ok)">Favours runway ${esc(a.best.rwy)} · ${esc(a.best.circuit)} circuit</div>` : ""}
+          ${a.best ? `<div class="tiny mt2" style="color:var(--ok-ink)">Favours runway ${esc(a.best.rwy)} · ${esc(a.best.circuit)} circuit</div>` : ""}
         </div>
       </div>
     </div>
@@ -2092,7 +2233,7 @@ function sevenDayRows() {
     if (!w) continue;
     const a = assess(w, false);
     const blocked = baseClosedOn(key) || (awayOn(key) ? "away" : null);
-    const colour = a.verdict === "go" ? "var(--ok)" : a.verdict === "marginal" ? "var(--warn)" : "var(--bad)";
+    const colour = a.verdict === "go" ? "var(--ok-ink)" : a.verdict === "marginal" ? "var(--warn-ink)" : "var(--bad-ink)";
     rows.push(`<button class="panel row-b" style="width:100%;text-align:left;gap:10px;opacity:${blocked ? ".5" : "1"}" onclick="onDayTap('${key}')">
       <span style="min-width:64px">
         <span class="small" style="font-weight:700">${DOW[d.getDay()]}</span>
@@ -2138,6 +2279,42 @@ function openSheet2(html) { const s = document.getElementById("sheet2"); s.inner
 function closeSheet2()    { document.getElementById("sheet2").classList.remove("open"); }
 
 /* ═══ 8b. ACTIONS ════════════════════════════════════════════════════════ */
+
+/* ── Theme ────────────────────────────────────────────────────────────
+   Three states: follow the OS, force light, force dark. Kept in
+   localStorage rather than the logbook document so it applies before
+   sign-in and never waits on the network. */
+const THEMES = ["auto", "light", "dark"];
+function currentTheme() {
+  const v = localStorage.getItem("flightlog.theme");
+  return THEMES.includes(v) ? v : "auto";
+}
+function themeLabel() {
+  const t = currentTheme();
+  return t === "auto" ? "following your device" : t;
+}
+function themeIcon() {
+  const t = currentTheme();
+  return t === "light" ? "☀" : t === "dark" ? "☾" : "◐";
+}
+function applyTheme() {
+  const t = currentTheme();
+  const root = document.documentElement;
+  if (t === "auto") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", t);
+  /* Keep the iOS status bar in step with the surface behind it. */
+  const dark = t === "dark" ||
+    (t === "auto" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", dark ? "#0a1626" : "#eef6ff");
+}
+function cycleTheme() {
+  const next = THEMES[(THEMES.indexOf(currentTheme()) + 1) % THEMES.length];
+  localStorage.setItem("flightlog.theme", next);
+  applyTheme();
+  render();
+  toast("Theme: " + themeLabel());
+}
 
 function setTab(t) { state.ui.tab = t; render(); if (t === "plan") fetchWeather(false); }
 function setFilter(f) { state.ui.filter = f; render(); }
@@ -2863,16 +3040,26 @@ window.addEventListener("offline", () => toast("Offline — changes are kept on 
 /* Web app manifest, generated in-page so there's no second file to deploy.
    Only Chrome/Android reads this; iOS uses the apple-mobile-web-app-* meta
    tags in the head. */
+applyTheme();
+if (window.matchMedia) {
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  const onChange = () => { if (currentTheme() === "auto") applyTheme(); };
+  if (mq.addEventListener) mq.addEventListener("change", onChange);
+  else if (mq.addListener) mq.addListener(onChange);
+}
+
 (function injectManifest() {
   try {
     const icon = "data:image/svg+xml," + encodeURIComponent(
       "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>" +
-      "<rect width='512' height='512' rx='112' fill='#070b14'/>" +
-      "<text x='256' y='352' font-size='280' text-anchor='middle' fill='#e8eef7'>✈</text></svg>");
+      "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>" +
+      "<stop offset='0' stop-color='#0ea5e9'/><stop offset='1' stop-color='#2563eb'/></linearGradient></defs>" +
+      "<rect width='512' height='512' rx='112' fill='url(#g)'/>" +
+      "<text x='256' y='352' font-size='280' text-anchor='middle' fill='#ffffff'>✈</text></svg>");
     const manifest = {
       name: "Flight Log — NPPL(M)", short_name: "Flight Log",
       start_url: location.pathname, scope: location.pathname.replace(/[^/]*$/, ""),
-      display: "standalone", background_color: "#070b14", theme_color: "#070b14",
+      display: "standalone", background_color: "#eef6ff", theme_color: "#0ea5e9",
       icons: [{ src: icon, sizes: "512x512", type: "image/svg+xml", purpose: "any" }]
     };
     const link = document.createElement("link");
